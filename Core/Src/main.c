@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "ssd1306.h"
 #include "motor.h"
+#include "serial_out.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,10 +60,6 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#include <string.h>
-void send_serial(char *ptr) {
-	HAL_UART_Transmit(&huart1,(uint8_t*)ptr, strlen(ptr), HAL_MAX_DELAY);
-}
 /* USER CODE END 0 */
 
 /**
@@ -97,10 +94,12 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_TIM3_Init();
+  MX_TIM2_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 	SSD1306_I2cInit(&hi2c1);
 		
-	send_serial("Start running\n");
+	send_to_serial("Start running\n");
 	
 	
 	uint8_t cmds[] = {0x00,0x8d,0x14,0xaf,0xa5};
@@ -118,15 +117,19 @@ int main(void)
 	HAL_Delay(500);
 	
 	Motor_Init();
-	Motor_SetSpeed(50);
+	Motor_Set_Speed(50);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1){
-
-		
+	  send_float_binary(25.7f);
+	  send_float_binary(25.7f);
+	  send_tail();
+	  
+	  //send_to_serial("Start running\n");
+	  HAL_Delay(500);
 		
     /* USER CODE END WHILE */
 

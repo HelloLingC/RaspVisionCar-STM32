@@ -405,6 +405,11 @@
               <FilePath>..\Core\Src\ssd1306.c</FilePath>
             </File>
             <File>
+              <FileName>serial_out.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\io\serial_out.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/main.c</FilePath>
@@ -701,6 +706,11 @@
               <FileName>motor_right.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\motor\motor_right.c</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\motor\encoder.c</FilePath>
             </File>
           </Files>
         </Group>

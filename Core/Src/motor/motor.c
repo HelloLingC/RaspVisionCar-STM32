@@ -40,7 +40,8 @@ void Motor_Init(void) {
 }
 
 void Motor_Set_Speed(int8_t speed) {
-	
+	Motor_Left_Set_Speed(speed);
+	Motor_Right_Set_Speed(speed);
 }
 
 

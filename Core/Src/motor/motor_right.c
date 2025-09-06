@@ -8,7 +8,7 @@
  * @param speed: 速度值 (-100 到 100)
  *       负值反转，正值正转，0停止
  */
-void Motor_Set_Right_Speed(int16_t speed) {
+void Motor_Right_Set_Speed(int8_t speed) {
   // 限制速度范围
   speed = (speed < -100) ? -100 : (speed > 100) ? 100 : speed;
   
