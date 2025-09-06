@@ -28,6 +28,8 @@
 #include "ssd1306.h"
 #include "motor.h"
 #include "serial_out.h"
+#include "rasp_comm.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -118,18 +120,37 @@ int main(void)
 	
 	Motor_Init();
 	Motor_Set_Speed(50);
+	
+	// 初始化树莓派通信协议
+	rasp_comm_init();
+	
+	// 测试USART专用printf函数
+	usart_log("系统初始化完成");
+	usart_info("电机速度设置为: %d", 50);
+	usart_debug("UART1波特率: %lu", 115200);
+	usart_info("树莓派通信协议已启动");
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1){
-	  send_float_binary(25.7f);
-	  send_float_binary(25.7f);
-	  send_tail();
+	  // 处理树莓派通信buffer
+	  rasp_comm_process();
 	  
-	  //send_to_serial("Start running\n");
-	  HAL_Delay(500);
+	  // 原有的数据发送（可选保留）
+	  // send_float_binary(25.7f);
+	  // send_float_binary(25.7f);
+	  // send_tail();
+	  
+	  // 定期输出系统状态（每5秒）
+	  static uint32_t last_status_time = 0;
+	  if (HAL_GetTick() - last_status_time > 5000) {
+		  usart_info("系统运行正常，运行时间: %lu ms", HAL_GetTick());
+		  last_status_time = HAL_GetTick();
+	  }
+	  
+	  HAL_Delay(10); // 减少延时以提高响应速度
 		
     /* USER CODE END WHILE */
 
@@ -211,3 +232,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
+/* USER CODE BEGIN 4 */
+
+/* USER CODE END 4 */

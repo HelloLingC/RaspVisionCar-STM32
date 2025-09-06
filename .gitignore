@@ -22,6 +22,8 @@
 RTE/
 Templates/
 Examples/
+MDK-ARM/
+EWARM/
 
 !*.uvprojx
 !*.h
