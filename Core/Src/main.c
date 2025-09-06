@@ -29,6 +29,9 @@
 #include "motor.h"
 #include "serial_out.h"
 #include "rasp_comm.h"
+// Add this in your main.h or similar header file
+
+
 
 /* USER CODE END Includes */
 
@@ -94,10 +97,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
-  MX_I2C1_Init();
   MX_TIM3_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	SSD1306_I2cInit(&hi2c1);
 		
@@ -232,7 +235,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
