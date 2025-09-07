@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -25,13 +25,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "ssd1306.h"
 #include "motor.h"
-#include "serial_out.h"
 #include "rasp_comm.h"
+#include "serial_out.h"
+#include "ssd1306.h"
+
 // Add this in your main.h or similar header file
-
-
 
 /* USER CODE END Includes */
 
@@ -101,60 +100,71 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   MX_I2C1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-	SSD1306_I2cInit(&hi2c1);
-		
-	send_to_serial("Start running\n");
-	
-	
-	uint8_t cmds[] = {0x00,0x8d,0x14,0xaf,0xa5};
-	HAL_I2C_Master_Transmit(&hi2c1, 0x78, cmds, sizeof(cmds), HAL_MAX_DELAY);
-	
-	uint8_t data_recvd;
-	HAL_I2C_Master_Receive(&hi2c1, 0x78, &data_recvd, 1, HAL_MAX_DELAY);
-	if((data_recvd & (0x01<<6)) == 0) {
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-	} else {
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-	}
-	
-	
-	HAL_Delay(500);
-	
-	Motor_Init();
-	Motor_Set_Speed(50);
-	
-	// 初始化树莓派通信协议
-	rasp_comm_init();
-	
-	// 测试USART专用printf函数
-	usart_log("系统初始化完成");
-	usart_info("电机速度设置为: %d", 50);
-	usart_debug("UART1波特率: %lu", 115200);
-	usart_info("树莓派通信协议已启动");
+  SSD1306_I2cInit(&hi2c1);
+
+  send_to_serial("Start running\n");
+
+  // OLED初始化命令序列
+  uint8_t oled_init_cmds[] = {0x00, 0x8d, 0x14, 0xaf, 0xa5};
+  HAL_StatusTypeDef i2c_status = HAL_I2C_Master_Transmit(
+      &hi2c1, 0x78, oled_init_cmds, sizeof(oled_init_cmds), HAL_MAX_DELAY);
+
+  if (i2c_status == HAL_OK) {
+    // 读取OLED状态
+    uint8_t data_recvd;
+    HAL_I2C_Master_Receive(&hi2c1, 0x78, &data_recvd, 1, HAL_MAX_DELAY);
+    if ((data_recvd & (0x01 << 6)) == 0) {
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+    } else {
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+    }
+  } else {
+    // I2C通信失败，点亮LED指示错误
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+  }
+
+  HAL_Delay(500);
+
+  Motor_Init();
+  Motor_Set_Speed(50);
+
+  // 初始化树莓派通信协议
+  rasp_comm_init();
+
+  usart_log("系统初始化完成");
+  usart_info("电机速度设置为: %d", 50);
+  usart_debug("UART1波特率: %lu", 115200);
+  usart_info("树莓派通信协议已启动");
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1){
-	  // 处理树莓派通信buffer
-	  rasp_comm_process();
-	  
-	  // 原有的数据发送（可选保留）
-	  // send_float_binary(25.7f);
-	  // send_float_binary(25.7f);
-	  // send_tail();
-	  
-	  // 定期输出系统状态（每5秒）
-	  static uint32_t last_status_time = 0;
-	  if (HAL_GetTick() - last_status_time > 5000) {
-		  usart_info("系统运行正常，运行时间: %lu ms", HAL_GetTick());
-		  last_status_time = HAL_GetTick();
-	  }
-	  
-	  HAL_Delay(10); // 减少延时以提高响应速度
-		
+  while (1) {
+    // 处理树莓派通信buffer
+    rasp_comm_process();
+
+    // 原有的数据发送（可选保留）
+    // send_float_binary(25.7f);
+    // send_float_binary(25.7f);
+    // send_tail();
+
+    // 定期输出系统状态（每5秒）
+    static uint32_t last_status_time = 0;
+    if (HAL_GetTick() - last_status_time > 5000) {
+      send_to_serial("系统运行正常，运行时间: ");
+      char tick_str[16];
+      snprintf(tick_str, sizeof(tick_str), "%lu", HAL_GetTick());
+      send_to_serial(tick_str);
+      send_to_serial(" ms\n");
+      //usart_info("系统运行正常，运行时间: %lu ms", HAL_GetTick());
+      last_status_time = HAL_GetTick();
+    }
+
+    HAL_Delay(10); // 减少延时以提高响应速度
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -214,8 +224,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
-  while (1)
-  {
+  while (1) {
   }
   /* USER CODE END Error_Handler_Debug */
 }
@@ -230,8 +239,9 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

@@ -10,7 +10,7 @@
       <TargetName>RaspVisionCar</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>6240000::V6.24::ARMCLANG</pCCUsed>
+      <pCCUsed>6210000::V6.21::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;..\Drivers\ThridParty</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../Drivers/ThridParty</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -408,6 +408,16 @@
               <FileName>serial_out.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\io\serial_out.c</FilePath>
+            </File>
+            <File>
+              <FileName>cJSON.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\ThridParty\cJSON.c</FilePath>
+            </File>
+            <File>
+              <FileName>rasp_comm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\rasp_comm.c</FilePath>
             </File>
             <File>
               <FileName>main.c</FileName>
@@ -494,16 +504,6 @@
               <FileName>stm32f1xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32f1xx_hal_msp.c</FilePath>
-            </File>
-            <File>
-              <FileName>cJSON.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Drivers\ThridParty\cJSON.c</FilePath>
-            </File>
-            <File>
-              <FileName>rasp_comm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\rasp_comm.c</FilePath>
             </File>
           </Files>
         </Group>
