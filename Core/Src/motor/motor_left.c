@@ -34,13 +34,3 @@ void Motor_Left_Set_Speed(int8_t speed) {
   
   // hmotor.current_speed = speed;
 }
-
-/**
- * @brief 电机刹车（快速停止）
- */
-void Motor_Left_Brake(void) {
-  HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_SET);
-  __HAL_TIM_SET_COMPARE(MOTOR_A_TIMER, TIM_CHANNEL_1, 0);
- // hmotor.current_speed = 0;
-}

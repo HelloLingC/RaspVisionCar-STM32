@@ -1,164 +1,91 @@
-/*
- * OLED_SSD1306.h
- *
- *  The MIT License.
- *  Created on: 27.01.2017
- *      Author: Mateusz Salamon
- *      www.msalamon.pl
- *      mateusz@msalamon.pl
+/**
+ * @file ssd1306.h
+ * @brief SSD1306 OLED显示屏驱动头文件
+ * @author STM32 Vision Car Project
+ * @date 2025
  */
 
-#ifndef OLED_SSD1306_H_
-#define OLED_SSD1306_H_
+#ifndef __SSD1306_H
+#define __SSD1306_H
 
-/*
- *
- *    SETTINGS
- *
- *    Please set only one interface. It won't work with both one time.
- *
- */
-//#define SSD1306_SPI_CONTROL
-#define SSD1306_I2C_CONTROL
-
-#ifdef SSD1306_I2C_CONTROL
-#define SSD1306_I2C_DMA_ENABLE
-#define SSD1306_I2C_ADDRESS   0x78
-#endif
-#ifdef SSD1306_SPI_CONTROL
-#define SSD1306_RESET_USE
-#define SSD1306_SPI_DMA_ENABLE
-#define SPI_CS_HARDWARE_CONTROL
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-//
-// Resolution
-//
-#define SSD1306_LCDWIDTH                  128
-#define SSD1306_LCDHEIGHT                 64
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "i2c.h"
+#include "fonts.h"
 
-/*
- * 		Please set what functionality you want to use.
- * 		Some functions need other functionalities. It should works automatically.
- *
- * 		1 - will be compiled
- * 		0 - won't be compiled
- */
-#define GRAPHIC_ACCELERATION_COMMANDS 1
-#define ADVANCED_GRAPHIC_COMMANDS 1
+/* SSD1306 配置参数 */
+#define SSD1306_I2C_ADDR        0x78    // SSD1306 I2C地址 (0x3C << 1)
+#define SSD1306_WIDTH           128     // 屏幕宽度
+#define SSD1306_HEIGHT          64      // 屏幕高度
+#define SSD1306_PAGES           8       // 页数 (64/8=8)
 
-/****************************************************************/
+/* SSD1306 命令定义 */
+#define SSD1306_SETCONTRAST                     0x81
+#define SSD1306_DISPLAYALLON_RESUME             0xA4
+#define SSD1306_DISPLAYALLON                    0xA5
+#define SSD1306_NORMALDISPLAY                   0xA6
+#define SSD1306_INVERTDISPLAY                   0xA7
+#define SSD1306_DISPLAYOFF                      0xAE
+#define SSD1306_DISPLAYON                       0xAF
+#define SSD1306_SETDISPLAYOFFSET                0xD3
+#define SSD1306_SETCOMPINS                      0xDA
+#define SSD1306_SETVCOMDETECT                   0xDB
+#define SSD1306_SETDISPLAYCLOCKDIV              0xD5
+#define SSD1306_SETPRECHARGE                    0xD9
+#define SSD1306_SETMULTIPLEX                    0xA8
+#define SSD1306_SETLOWCOLUMN                    0x00
+#define SSD1306_SETHIGHCOLUMN                   0x10
+#define SSD1306_SETSTARTLINE                    0x40
+#define SSD1306_MEMORYMODE                      0x20
+#define SSD1306_COLUMNADDR                      0x21
+#define SSD1306_PAGEADDR                        0x22
+#define SSD1306_COMSCANINC                      0xC0
+#define SSD1306_COMSCANDEC                      0xC8
+#define SSD1306_SEGREMAP                        0xA0
+#define SSD1306_CHARGEPUMP                      0x8D
+#define SSD1306_EXTERNALVCC                     0x1
+#define SSD1306_SWITCHCAPVCC                    0x2
 
-//
-// Commands
-//
-#define SSD1306_SETCONTRAST 0x81
-#define SSD1306_DISPLAYALLON_RESUME 0xA4
-#define SSD1306_DISPLAYALLON 0xA5
-#define SSD1306_NORMALDISPLAY 0xA6
-#define SSD1306_INVERTDISPLAY 0xA7
-#define SSD1306_DISPLAYOFF 0xAE
-#define SSD1306_DISPLAYON 0xAF
-#define SSD1306_SETDISPLAYOFFSET 0xD3
-#define SSD1306_SETCOMPINS 0xDA
-#define SSD1306_SETVCOMDETECT 0xDB
-#define SSD1306_SETDISPLAYCLOCKDIV 0xD5
-#define SSD1306_SETPRECHARGE 0xD9
-#define SSD1306_SETMULTIPLEX 0xA8
-#define SSD1306_SETLOWCOLUMN 0x00
-#define SSD1306_SETHIGHCOLUMN 0x10
-#define SSD1306_SETSTARTLINE 0x40
-#define SSD1306_MEMORYMODE 0x20
-#define SSD1306_COLUMNADDR 0x21
-#define SSD1306_PAGEADDR   0x22
-#define SSD1306_COMSCANINC 0xC0
-#define SSD1306_COMSCANDEC 0xC8
-#define SSD1306_SEGREMAP 0xA0
-#define SSD1306_CHARGEPUMP 0x8D
-#define SSD1306_EXTERNALVCC 0x1
-#define SSD1306_SWITCHCAPVCC 0x2
+/* 颜色定义 */
+#define SSD1306_COLOR_BLACK     0x00
+#define SSD1306_COLOR_WHITE     0x01
+#define SSD1306_COLOR_INVERT    0x02
 
-//
-// Scrolling #defines
-//
-#define SSD1306_ACTIVATE_SCROLL 0x2F
-#define SSD1306_DEACTIVATE_SCROLL 0x2E
-#define SSD1306_SET_VERTICAL_SCROLL_AREA 0xA3
-#define SSD1306_RIGHT_HORIZONTAL_SCROLL 0x26
-#define SSD1306_LEFT_HORIZONTAL_SCROLL 0x27
-#define SSD1306_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL 0x29
-#define SSD1306_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL 0x2A
+/* 字体大小定义 */
+typedef enum {
+    SSD1306_FontSize_7x10 = 0,
+    SSD1306_FontSize_11x18,
+    SSD1306_FontSize_16x26
+} SSD1306_FontSize_t;
 
-//
-// Advanced Graphic defines
-//
-#define SSD1306_FADE_OUT 0x23
-#define SSD1306_ZOOM_IN 0xD6
+/* 函数声明 */
+uint8_t SSD1306_Init(void);
+void SSD1306_UpdateScreen(void);
+void SSD1306_ToggleInvert(void);
+void SSD1306_Fill(uint8_t Color);
+void SSD1306_DrawPixel(uint8_t x, uint8_t y, uint8_t color);
+void SSD1306_GotoXY(uint8_t x, uint8_t y);
+char SSD1306_Putc(char ch, FontDef_t* Font, uint8_t color);
+char SSD1306_Puts(char* str, FontDef_t* Font, uint8_t color);
+void SSD1306_DrawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color);
+void SSD1306_DrawRectangle(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t color);
+void SSD1306_DrawFilledRectangle(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t color);
+void SSD1306_DrawTriangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t x3, uint8_t y3, uint8_t color);
+void SSD1306_DrawCircle(int16_t x0, int16_t y0, int16_t r, uint8_t color);
+void SSD1306_DrawFilledCircle(int16_t x0, int16_t y0, int16_t r, uint8_t color);
+void SSD1306_DrawBitmap(int16_t x, int16_t y, const unsigned char* bitmap, int16_t w, int16_t h, uint8_t color);
 
-//
-// Colors
-//
-#define BLACK 0
-#define WHITE 1
-#define INVERSE 2
+/* 私有函数声明 */
+void SSD1306_WriteCommand(uint8_t command);
+void SSD1306_WriteData(uint8_t data);
+void SSD1306_WriteDataBuffer(uint8_t* data, uint16_t length);
 
-//
-// Scrolling enums
-//
-typedef enum
-{
-	SCROLL_EVERY_5_FRAMES,
-	SCROLL_EVERY_64_FRAMES,
-	SCROLL_EVERY_128_FRAMES,
-	SCROLL_EVERY_256_FRAMES,
-	SCROLL_EVERY_3_FRAMES,
-	SCROLL_EVERY_4_FRAMES,
-	SCROLL_EVERY_25_FRAMES,
-	SCROLL_EVERY_2_FRAMES,
-} scroll_horizontal_speed;
-//
-// Functions
-//
-#ifdef SSD1306_I2C_CONTROL
-void SSD1306_I2cInit(I2C_HandleTypeDef *i2c);
+#ifdef __cplusplus
+}
 #endif
 
-
-//
-// Configuration
-//
-void SSD1306_DisplayON(uint8_t On);
-void SSD1306_InvertColors(uint8_t Invert);
-void SSD1306_RotateDisplay(uint8_t Rotate);
-void SSD1306_SetContrast(uint8_t Contrast);
-
-//
-// Drawing
-//
-void SSD1306_DrawPixel(int16_t x, int16_t y, uint8_t Color);
-void SSD1306_Clear(uint8_t Color);
-void SSD1306_Display(void);
-void SSD1306_Bitmap(uint8_t *bitmap);
-
-#if GRAPHIC_ACCELERATION_COMMANDS == 1
-//
-// Graphic Acceleration Commands
-//
-void SSD1306_StartScrollRight(uint8_t StartPage, uint8_t EndPage, scroll_horizontal_speed Speed);
-void SSD1306_StartScrollLeft(uint8_t StartPage, uint8_t EndPage, scroll_horizontal_speed Speed);
-void SSD1306_StartScrollRightUp(uint8_t StartPage, uint8_t EndPage, scroll_horizontal_speed HorizontalSpeed, uint8_t VerticalOffset);
-void SSD1306_StartScrollLeftUp(uint8_t StartPage, uint8_t EndPage, scroll_horizontal_speed HorizontalSpeed, uint8_t VerticalOffset);
-void SSD1306_StopScroll(void);
-#endif
-
-#if ADVANCED_GRAPHIC_COMMANDS == 1
-//
-// Advanced Graphic Commands
-//
-void SSD1306_StartFadeOut(uint8_t Interval);
-void SSD1306_StartBlinking(uint8_t Interval);
-void SSD1306_StopFadeOutOrBlinking(void);
-void SSD1306_ZoomIn(uint8_t Zoom);
-#endif
-
-#endif /* OLED_SSD1306_H_ */
+#endif /* __SSD1306_H */

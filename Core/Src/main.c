@@ -27,8 +27,9 @@
 /* USER CODE BEGIN Includes */
 #include "motor.h"
 #include "rasp_comm.h"
-#include "serial_out.h"
+#include "justfloat.h"
 #include "ssd1306.h"
+#include "feedforward_controller.h"
 
 // Add this in your main.h or similar header file
 
@@ -58,7 +59,9 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+extern void init_encoders(void);
+extern void encoder_update_100ms(void);
+extern void encoder_get_motor_speed(int16_t* left_speed_rpm, int16_t* right_speed_rpm);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,41 +105,39 @@ int main(void)
   MX_I2C1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  SSD1306_I2cInit(&hi2c1);
 
-  send_to_serial("Start running\n");
-
-  // OLED初始化命令序列
-  uint8_t oled_init_cmds[] = {0x00, 0x8d, 0x14, 0xaf, 0xa5};
-  HAL_StatusTypeDef i2c_status = HAL_I2C_Master_Transmit(
-      &hi2c1, 0x78, oled_init_cmds, sizeof(oled_init_cmds), HAL_MAX_DELAY);
-
-  if (i2c_status == HAL_OK) {
-    // 读取OLED状态
-    uint8_t data_recvd;
-    HAL_I2C_Master_Receive(&hi2c1, 0x78, &data_recvd, 1, HAL_MAX_DELAY);
-    if ((data_recvd & (0x01 << 6)) == 0) {
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-    } else {
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-    }
-  } else {
-    // I2C通信失败，点亮LED指示错误
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-  }
-
-  HAL_Delay(500);
+  // 编码器初始化
+  init_encoders();
 
   Motor_Init();
-  Motor_Set_Speed(50);
+  // 由前馈控制器控制速度，不再直接用占空比百分比
+  ff_init_default();
 
   // 初始化树莓派通信协议
   rasp_comm_init();
 
-  usart_log("系统初始化完成");
-  usart_info("电机速度设置为: %d", 50);
-  usart_debug("UART1波特率: %lu", 115200);
-  usart_info("树莓派通信协议已启动");
+  // 初始化SSD1306显示屏
+  if (SSD1306_Init() == 0) {
+    SSD1306_Fill(SSD1306_COLOR_WHITE);
+    SSD1306_UpdateScreen();
+    usart_log("SSD1306 Screen Initialized");
+    
+    // 显示欢迎信息
+    SSD1306_Fill(SSD1306_COLOR_BLACK);
+    SSD1306_GotoXY(0, 0);
+    SSD1306_Puts("Rasp Vision Car", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 20);
+    SSD1306_Puts("System Ready", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_UpdateScreen();
+  } else {
+    usart_log("SSD1306 Screen Initialization Failed");
+  }
+
+  HAL_Delay(500);
+  //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
+  Motor_Set_Speed(10);
+
+  usart_log("System Initialized");
 
   /* USER CODE END 2 */
 
@@ -146,20 +147,42 @@ int main(void)
     // 处理树莓派通信buffer
     rasp_comm_process();
 
-    // 原有的数据发送（可选保留）
-    // send_float_binary(25.7f);
-    // send_float_binary(25.7f);
-    // send_tail();
+    // 每100ms更新一次编码器转速
+    static uint32_t last_enc_time = 0;
+    if (HAL_GetTick() - last_enc_time >= 100) {
+      encoder_update_100ms();
+      int16_t l_rpm = 0, r_rpm = 0;
+      encoder_get_motor_speed(&l_rpm, &r_rpm);
+
+      // Update motor speed in feedforward controller
+      ff_update_100ms(l_rpm, r_rpm);
+
+      send_float_binary(l_rpm);
+      send_float_binary(r_rpm);
+      send_tail();
+      last_enc_time = HAL_GetTick();
+    }
 
     // 定期输出系统状态（每5秒）
     static uint32_t last_status_time = 0;
     if (HAL_GetTick() - last_status_time > 5000) {
-      send_to_serial("系统运行正常，运行时间: ");
-      char tick_str[16];
-      snprintf(tick_str, sizeof(tick_str), "%lu", HAL_GetTick());
-      send_to_serial(tick_str);
-      send_to_serial(" ms\n");
-      //usart_info("系统运行正常，运行时间: %lu ms", HAL_GetTick());
+      
+      // 更新OLED显示
+      SSD1306_Fill(SSD1306_COLOR_BLACK);
+      SSD1306_GotoXY(0, 0);
+      SSD1306_Puts("Rasp Vision Car", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 15);
+      SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 30);
+      SSD1306_Puts("Time:", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(35, 30);
+      char time_str[12];
+      snprintf(time_str, sizeof(time_str), "%lus", HAL_GetTick() / 1000);
+      SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 45);
+      SSD1306_Puts("Motor: 50%", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_UpdateScreen();
+      
       last_status_time = HAL_GetTick();
     }
 
