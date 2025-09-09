@@ -30,6 +30,7 @@
 #include "justfloat.h"
 #include "ssd1306.h"
 #include "feedforward_controller.h"
+#include "pid_controller.h"
 
 // Add this in your main.h or similar header file
 
@@ -110,8 +111,8 @@ int main(void)
   init_encoders();
 
   Motor_Init();
-  // 由前馈控制器控制速度，不再直接用占空比百分比
-  ff_init_default();
+  // 初始化 PID 控制器（闭环速度控制）
+  pid_init_default();
 
   // 初始化树莓派通信协议
   rasp_comm_init();
@@ -134,8 +135,7 @@ int main(void)
   }
 
   HAL_Delay(500);
-  //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
-  Motor_Set_Speed(10);
+  pid_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
 
   usart_log("System Initialized");
 
@@ -154,8 +154,8 @@ int main(void)
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
 
-      // Update motor speed in feedforward controller
-      ff_update_100ms(l_rpm, r_rpm);
+      // Update motor speed via PID controller
+      pid_update_100ms(l_rpm, r_rpm);
 
       send_float_binary(l_rpm);
       send_float_binary(r_rpm);
@@ -163,9 +163,9 @@ int main(void)
       last_enc_time = HAL_GetTick();
     }
 
-    // 定期输出系统状态（每5秒）
+    // 定期输出系统状态
     static uint32_t last_status_time = 0;
-    if (HAL_GetTick() - last_status_time > 5000) {
+    if (HAL_GetTick() - last_status_time > 1000) {
       
       // 更新OLED显示
       SSD1306_Fill(SSD1306_COLOR_BLACK);
@@ -176,11 +176,15 @@ int main(void)
       SSD1306_GotoXY(0, 30);
       SSD1306_Puts("Time:", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(35, 30);
-      char time_str[12];
+       char time_str[12];
       snprintf(time_str, sizeof(time_str), "%lus", HAL_GetTick() / 1000);
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(0, 45);
-      SSD1306_Puts("Motor: 50%", &Font_7x10, SSD1306_COLOR_WHITE);
+      char motor_str[18];
+      int16_t l_rpm = 0, r_rpm = 0;
+      encoder_get_motor_speed(&l_rpm, &r_rpm);
+      snprintf(motor_str, sizeof(motor_str), "MTR: %d %d rpm", l_rpm, r_rpm);
+      SSD1306_Puts(motor_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_UpdateScreen();
       
       last_status_time = HAL_GetTick();

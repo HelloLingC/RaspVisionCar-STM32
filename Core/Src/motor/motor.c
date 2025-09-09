@@ -35,8 +35,6 @@ void Motor_Init(void) {
 	__HAL_TIM_SET_COMPARE(MOTOR_A_TIMER, TIM_CHANNEL_1, 0);
 	__HAL_TIM_SET_COMPARE(MOTOR_B_TIMER, TIM_CHANNEL_2, 0);
 
-	//hmotor.is_initialized = 1;
-	//hmotor.current_speed = 0;
 }
 
 void Motor_Set_Speed(int8_t speed) {

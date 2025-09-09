@@ -4,6 +4,9 @@
 #define ENCODER_PPR 13
 #define MOTOR_GEAR_RATIO 28.0f
 
+#define encoder_timer_left &htim2
+#define encoder_timer_right &htim4
+
 typedef struct {
     TIM_HandleTypeDef* timer;
 	int32_t last_count;
@@ -13,35 +16,31 @@ typedef struct {
 static Encoder_t encoder_left, encoder_right;
 
 void init_encoders(void) {
-	encoder_left.timer = &htim2;
-	encoder_left.last_count = 0;
+	encoder_left.timer = encoder_timer_left;
+	encoder_left.last_count = (int32_t)(encoder_left.timer->Instance->CNT);
 	encoder_left.rpm = 0;
 	
-	encoder_right.timer = &htim4;
-	encoder_right.last_count = 0;
+	encoder_right.timer = encoder_timer_right;
+	encoder_right.last_count = (int32_t)(encoder_right.timer->Instance->CNT);
 	encoder_right.rpm = 0;
 	
-	HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
-	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
+	HAL_TIM_Encoder_Start(encoder_timer_left, TIM_CHANNEL_ALL);
+	HAL_TIM_Encoder_Start(encoder_timer_right, TIM_CHANNEL_ALL);
 }
 
 static void encoder_update_one(Encoder_t* enc) {
 	int32_t current = (int32_t)(enc->timer->Instance->CNT);
 	int32_t diff = current - enc->last_count;
-	// 处理16位计数器溢出/下溢
-	if(diff > 32767) {
-		diff -= 65536;
-	} else if (diff < -32768) {
-		diff += 65536;
-	}
 	int32_t pulse_per_sec = diff * 10; // 100ms 调用一次 -> ×10 得到每秒脉冲数
 	// 4倍频模式（Encoder Mode: TI12），实际每转脉冲数 = PPR × 4
 	float rpm_f = (float)pulse_per_sec * 60.0f / (float)(ENCODER_PPR * 4);
     // MGX513X 减速比 28:1
     rpm_f = rpm_f / MOTOR_GEAR_RATIO;
 
-    if (rpm_f > 32767.0f) rpm_f = 32767.0f;
-	if (rpm_f < -32768.0f) rpm_f = -32768.0f;
+	// 抑制抖动：接近零的小数值归零
+	// if (rpm_f > -3.0f && rpm_f < 3.0f) {
+	// 	rpm_f = 0.0f;
+	// }
 	enc->rpm = (int16_t)rpm_f;
 	enc->last_count = current;
 }
