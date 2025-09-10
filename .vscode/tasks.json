@@ -1,0 +1,60 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Project (Release)",
+            "type": "shell",
+            "command": "make", // Windows 下如果 make 不可用，可能需要指定完整路径，如 "C:\\MinGW\\msys\\1.0\\bin\\make.exe"
+            "args": [
+                "-j4", // 使用4个线程并行编译，加快速度
+                "all"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
+            "label": "Clean Project",
+            "type": "shell",
+            "command": "make",
+            "args": ["clean"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
+            "label": "Flash with OpenOCD",
+            "type": "shell",
+            "command": "openocd", // 确保在 PATH 中
+            "args": [
+                "-f", "interface/daplink.cfg", // stlink.cfg,jlink.cfg
+                "-f", "target/stm32f1x.cfg",  // f1x, f4x
+                "-c", "program build/RaspVisionCar.elf verify reset exit"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "clear": true
+            },
+            "dependsOn": "Build Project (Release)" // 烧录前先构建
+        }
+    ]
+}

@@ -12,7 +12,7 @@ typedef struct {
 } PID_Params;
 
 void pid_init_default(void);
-void pid_init(const PID_Params* params);
+void pid_init(const PID_Params* left_params, const PID_Params* right_params);
 
 // Set target wheel speeds in RPM
 void pid_set_target_rpm(int16_t left_target_rpm, int16_t right_target_rpm);
