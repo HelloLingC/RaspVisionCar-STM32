@@ -1,52 +1,51 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        // {
-        //     "name": "Cortex Debug (OpenOCD)",
-        //     "cwd": "${workspaceRoot}",
-        //     "executable": "build/RaspVisionCar.elf",
-        //     "request": "launch",
-        //     "type": "cortex-debug",
-        //     "servertype": "openocd",
-        //     "serverpath": "openocd",
-        //     "interface": "swd",
-        //     "device": "STM32F103C8",
-        //     "configFiles": [
-        //         "interface/stlink.cfg",
-        //         "target/stm32f1x.cfg"
-        //     ],
-        //     "svdFile": "Drivers/CMSIS/Device/ST/STM32F1xx/SVD/STM32F103xx.svd",
-        //     "preLaunchTask": "Build Project (Release)",
-        //     // "runToMain": true, // 启动后运行到 main 函数
-        // }
-        // ,
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Remote Debug (STM32F1)",
+      "cwd": "${workspaceFolder}",
+      "executable": "build/RaspVisionCar.elf",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "external",
+      "gdbTarget": "192.168.156.107:3333",
+      "gdbPath": "arm-none-eabi-gdb",
+      "device": "STM32F103C8",
+      "runToEntryPoint": "main",
+      "preLaunchTask": "Build Project (Release)"
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "d:/Projects/STM32/RaspVisionCar/Core/Src",
+      "program": "d:/Projects/STM32/RaspVisionCar/Core/Src/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
         {
-            "name": "Remote Debug (STM32F1)",
-            "cwd": "${workspaceFolder}",
-            "executable": "build/RaspVisionCar.elf",
-            "request": "launch",
-            "type": "cortex-debug",
-            "servertype": "external",
-            "gdbTarget": "192.168.156.107:3333",
-            "gdbPath": "arm-none-eabi-gdb",
-            "device": "STM32F103C8",
-            "runToEntryPoint": "main",
-            //"preLaunchTask": "Build Project (Release)"
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
         }
-    ]
-    ,
-    "inputs": [
-        {
-            "id": "remoteGdbHost",
-            "type": "promptString",
-            "description": "Remote GDB server host",
-            "default": "127.0.0.1"
-        },
-        {
-            "id": "remoteGdbPort",
-            "type": "promptString",
-            "description": "Remote GDB server port",
-            "default": "3333"
-        }
-    ]
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "remoteGdbHost",
+      "type": "promptString",
+      "description": "Remote GDB server host",
+      "default": "127.0.0.1"
+    },
+    {
+      "id": "remoteGdbPort",
+      "type": "promptString",
+      "description": "Remote GDB server port",
+      "default": "3333"
+    }
+  ]
 }

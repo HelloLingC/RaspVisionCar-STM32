@@ -30,6 +30,7 @@
 #include "justfloat.h"
 #include "ssd1306.h"
 #include "feedforward_controller.h"
+#include "delay.h"
 
 // Add this in your main.h or similar header file
 
@@ -134,7 +135,7 @@ int main(void)
     usart_log("SSD1306 Screen Initialization Failed");
   }
 
-  HAL_Delay(1200);
+  //delay_ms(1200);
   //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
   Motor_Set_Speed(40);
 
@@ -146,7 +147,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1) {
     // 处理树莓派通信buffer
-    rasp_comm_process();
+    //rasp_comm_process();
 
     // 每100ms更新一次编码器转速
     static uint32_t last_enc_time = 0;
@@ -164,7 +165,7 @@ int main(void)
       last_enc_time = HAL_GetTick();
     }
 
-    // 定期输出系统状态（每5秒）
+    // 定期输出系统状态
     static uint32_t last_status_time = 0;
     if (HAL_GetTick() - last_status_time > 1000) {
       
@@ -220,7 +221,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  HAL_StatusTypeDef HAL_result = HAL_RCC_OscConfig(&RCC_OscInitStruct);
+  if (HAL_result != HAL_OK)
   {
     Error_Handler();
   }
