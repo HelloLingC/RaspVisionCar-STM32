@@ -135,7 +135,8 @@ int main(void)
     usart_log("SSD1306 Screen Initialization Failed");
   }
 
-  //delay_ms(1200);
+  HAL_Delay(1200);
+
   //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
   Motor_Set_Speed(40);
 
