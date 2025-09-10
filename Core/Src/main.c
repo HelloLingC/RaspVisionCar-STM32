@@ -110,30 +110,31 @@ int main(void)
   init_encoders();
 
   Motor_Init();
-  // 由前馈控制器控制速度，不再直接用占空比百分比
-  ff_init_default();
+
+  
+  //ff_init_default();
 
   // 初始化树莓派通信协议
   rasp_comm_init();
 
   // 初始化SSD1306显示屏
   if (SSD1306_Init() == 0) {
-    SSD1306_Fill(SSD1306_COLOR_WHITE);
-    SSD1306_UpdateScreen();
-    usart_log("SSD1306 Screen Initialized");
-    
     // 显示欢迎信息
     SSD1306_Fill(SSD1306_COLOR_BLACK);
     SSD1306_GotoXY(0, 0);
     SSD1306_Puts("Rasp Vision Car", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 20);
+    SSD1306_Puts(__DATE__, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 30);
+    SSD1306_Puts(__TIME__, &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_GotoXY(0, 40);
     SSD1306_Puts("System Ready", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_UpdateScreen();
   } else {
     usart_log("SSD1306 Screen Initialization Failed");
   }
 
-  HAL_Delay(500);
+  HAL_Delay(1200);
   //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
   Motor_Set_Speed(40);
 
@@ -165,16 +166,16 @@ int main(void)
 
     // 定期输出系统状态（每5秒）
     static uint32_t last_status_time = 0;
-    if (HAL_GetTick() - last_status_time > 5000) {
+    if (HAL_GetTick() - last_status_time > 1000) {
       
       // 更新OLED显示
       SSD1306_Fill(SSD1306_COLOR_BLACK);
       SSD1306_GotoXY(0, 0);
-      SSD1306_Puts("Rasp Vision Car", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(0, 15);
       SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(0, 30);
-      SSD1306_Puts("Time:", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(35, 30);
       char time_str[12];
       snprintf(time_str, sizeof(time_str), "%lus", HAL_GetTick() / 1000);
@@ -183,7 +184,7 @@ int main(void)
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
       SSD1306_GotoXY(0, 45);
-      char speed_str[12];
+      char speed_str[18];
       snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
       SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_UpdateScreen();

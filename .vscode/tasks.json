@@ -13,7 +13,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": ["$gcc"],
+            //"problemMatcher": ["$gcc"],
             "presentation": {
                 "echo": true,
                 "reveal": "silent",
@@ -55,6 +55,44 @@
                 "clear": true
             },
             "dependsOn": "Build Project (Release)" // 烧录前先构建
+        },
+        {
+            "label": "Flash via Remote GDB (OpenOCD)",
+            "type": "shell",
+            "command": "arm-none-eabi-gdb", // 确保在 PATH 中（GNU Arm Embedded Toolchain）
+            "args": [
+                "build/RaspVisionCar.elf",
+                "-q",
+                "-ex", "target extended-remote ${input:remoteGdbHost}:3333",
+                "-ex", "monitor reset halt",
+                "-ex", "load",
+                "-ex", "monitor reset",
+                "-ex", "detach",
+                "-ex", "quit"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "clear": true
+            },
+            "dependsOn": "Build Project (Release)" // 远程烧录前先构建
+        }
+    ],
+    "inputs": [
+        {
+            "id": "remoteGdbHost",
+            "type": "promptString",
+            "description": "Remote OpenOCD GDB server host",
+            "default": "127.0.0.1"
+        },
+        {
+            "id": "remoteGdbPort",
+            "type": "promptString",
+            "description": "Remote OpenOCD GDB server port",
+            "default": "3333"
         }
     ]
 }
