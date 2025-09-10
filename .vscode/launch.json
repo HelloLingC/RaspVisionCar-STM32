@@ -1,25 +1,25 @@
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Cortex Debug (OpenOCD)",
-            "cwd": "${workspaceRoot}",
-            "executable": "build/RaspVisionCar.elf",
-            "request": "launch",
-            "type": "cortex-debug",
-            "servertype": "openocd",
-            "serverpath": "openocd",
-            "interface": "swd",
-            "device": "STM32F103C8",
-            "configFiles": [
-                "interface/stlink.cfg",
-                "target/stm32f1x.cfg"
-            ],
-            "svdFile": "Drivers/CMSIS/Device/ST/STM32F1xx/SVD/STM32F103xx.svd",
-            "preLaunchTask": "Build Project (Release)",
-            // "runToMain": true, // 启动后运行到 main 函数
-        }
-        ,
+        // {
+        //     "name": "Cortex Debug (OpenOCD)",
+        //     "cwd": "${workspaceRoot}",
+        //     "executable": "build/RaspVisionCar.elf",
+        //     "request": "launch",
+        //     "type": "cortex-debug",
+        //     "servertype": "openocd",
+        //     "serverpath": "openocd",
+        //     "interface": "swd",
+        //     "device": "STM32F103C8",
+        //     "configFiles": [
+        //         "interface/stlink.cfg",
+        //         "target/stm32f1x.cfg"
+        //     ],
+        //     "svdFile": "Drivers/CMSIS/Device/ST/STM32F1xx/SVD/STM32F103xx.svd",
+        //     "preLaunchTask": "Build Project (Release)",
+        //     // "runToMain": true, // 启动后运行到 main 函数
+        // }
+        // ,
         {
             "name": "Remote Debug (STM32F1)",
             "cwd": "${workspaceFolder}",
