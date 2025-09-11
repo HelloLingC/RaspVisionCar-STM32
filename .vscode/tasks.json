@@ -63,7 +63,7 @@
             "args": [
                 "build/RaspVisionCar.elf",
                 "-q",
-                "-ex", "target extended-remote ${input:remoteGdbHost}:3333",
+                "-ex", "target extended-remote 192.168.156.107:3333",
                 "-ex", "monitor reset halt",
                 "-ex", "load",
                 "-ex", "monitor reset",

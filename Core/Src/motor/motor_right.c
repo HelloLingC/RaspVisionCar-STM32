@@ -17,7 +17,7 @@ void Motor_Right_Set_Speed(int8_t speed) {
   
   if (speed > 0) {
     // 正转 Forward
-	HAL_GPIO_WritePin(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, GPIO_PIN_SET);
+	  HAL_GPIO_WritePin(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(MOTOR_BIN2_PORT, MOTOR_BIN2_PIN, GPIO_PIN_RESET);
   } else if (speed < 0) {
     // 反转 Backward
@@ -25,12 +25,16 @@ void Motor_Right_Set_Speed(int8_t speed) {
     HAL_GPIO_WritePin(MOTOR_BIN2_PORT, MOTOR_BIN2_PIN, GPIO_PIN_SET);
   } else {
     // 停止 Stop
-    HAL_GPIO_WritePin(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(MOTOR_BIN2_PORT, MOTOR_BIN2_PIN, GPIO_PIN_RESET);
+    Motor_Right_ALL_RESET();
   }
   
   // Set PWM value
   __HAL_TIM_SET_COMPARE(MOTOR_B_TIMER, TIM_CHANNEL_2, pwm_value);
   
   //hmotor.current_speed = speed;
+}
+
+void Motor_Right_ALL_RESET(void) {
+  HAL_GPIO_WritePin(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(MOTOR_BIN2_PORT, MOTOR_BIN2_PIN, GPIO_PIN_RESET);
 }

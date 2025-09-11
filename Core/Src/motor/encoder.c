@@ -1,5 +1,6 @@
 #include "main.h"
 #include "tim.h"
+#include "encoder.h"
 
 #define ENCODER_PPR 13
 #define MOTOR_GEAR_RATIO 28.0f
@@ -29,7 +30,8 @@ void init_encoders(void) {
 }
 
 static void encoder_update_one(Encoder_t* enc) {
-	int32_t current = (int32_t)(enc->timer->Instance->CNT);
+	int16_t cnt = enc->timer->Instance->CNT;
+	int32_t current = (int32_t)cnt;
 	int32_t diff = current - enc->last_count;
 	int32_t pulse_per_sec = diff * 10; // 100ms 调用一次 -> ×10 得到每秒脉冲数
 	// 4倍频模式（Encoder Mode: TI12），实际每转脉冲数 = PPR × 4
@@ -41,14 +43,15 @@ static void encoder_update_one(Encoder_t* enc) {
 	// if (rpm_f > -3.0f && rpm_f < 3.0f) {
 	// 	rpm_f = 0.0f;
 	// }
-	enc->rpm = (int16_t)rpm_f;
+	int16_t rpm_r = (int16_t)rpm_f;
+	enc->rpm = rpm_r;
 	enc->last_count = current;
 }
 
 // 应在100ms周期调用一次
 void encoder_update_100ms(void) {
 	encoder_update_one(&encoder_left);
-	encoder_update_one(&encoder_right);
+	//encoder_update_one(&encoder_right);
 }
 
 void encoder_get_motor_speed(int16_t* left_speed_rpm, int16_t* right_speed_rpm)

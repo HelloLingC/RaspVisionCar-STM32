@@ -34,3 +34,8 @@ void Motor_Left_Set_Speed(int8_t speed) {
   
   // hmotor.current_speed = speed;
 }
+
+void Motor_Left_ALL_RESET(void) {
+    HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_RESET);
+}

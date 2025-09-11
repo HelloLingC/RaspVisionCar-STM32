@@ -26,11 +26,14 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "motor.h"
+#include "motor_left.h"
+#include "motor_right.h"
 #include "rasp_comm.h"
 #include "justfloat.h"
 #include "ssd1306.h"
 #include "feedforward_controller.h"
 #include "delay.h"
+#include "encoder.h"
 
 // Add this in your main.h or similar header file
 
@@ -60,9 +63,7 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-extern void init_encoders(void);
-extern void encoder_update_100ms(void);
-extern void encoder_get_motor_speed(int16_t* left_speed_rpm, int16_t* right_speed_rpm);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -112,7 +113,6 @@ int main(void)
 
   Motor_Init();
 
-  
   //ff_init_default();
 
   // 初始化树莓派通信协议
@@ -138,7 +138,10 @@ int main(void)
   HAL_Delay(1200);
 
   //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
-  Motor_Set_Speed(40);
+  // Motor_Set_Speed(30);
+  // Motor_Right_Set_Speed(0);
+  // Motor_Left_Set_Speed(0);
+  Motor_Left_GPIO_Forward();
 
   usart_log("System Initialized");
 
@@ -153,16 +156,16 @@ int main(void)
     // 每100ms更新一次编码器转速
     static uint32_t last_enc_time = 0;
     if (HAL_GetTick() - last_enc_time >= 100) {
-      encoder_update_100ms();
-      int16_t l_rpm = 0, r_rpm = 0;
-      encoder_get_motor_speed(&l_rpm, &r_rpm);
+      // encoder_update_100ms();
+      // int16_t l_rpm = 0, r_rpm = 0;
+      // encoder_get_motor_speed(&l_rpm, &r_rpm);
 
       // Update motor speed in feedforward controller
       //ff_update_100ms(l_rpm, r_rpm);
 
-      send_float_binary(l_rpm);
-      send_float_binary(r_rpm);
-      send_tail();
+      // send_float_binary(l_rpm);
+      // send_float_binary(r_rpm);
+      // send_tail();
       last_enc_time = HAL_GetTick();
     }
 
@@ -183,6 +186,7 @@ int main(void)
       snprintf(time_str, sizeof(time_str), "%lus", HAL_GetTick() / 1000);
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
+      encoder_update_100ms();
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
       SSD1306_GotoXY(0, 45);
@@ -193,8 +197,6 @@ int main(void)
       
       last_status_time = HAL_GetTick();
     }
-
-    HAL_Delay(10); // 减少延时以提高响应速度
 
     /* USER CODE END WHILE */
 
