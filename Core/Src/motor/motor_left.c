@@ -25,8 +25,7 @@ void Motor_Left_Set_Speed(int8_t speed) {
     HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_SET);
   } else {
     // 停止
-    HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_RESET);
+    Motor_Left_ALL_RESET();
   }
   
   // 设置PWM值

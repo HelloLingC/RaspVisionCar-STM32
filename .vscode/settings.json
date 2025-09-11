@@ -61,6 +61,7 @@
     "motor_left.h": "c",
     "feedforward_controller.h": "c",
     "delay.h": "c",
-    "motor_right.h": "c"
+    "motor_right.h": "c",
+    "encoder.h": "c"
   }
 }

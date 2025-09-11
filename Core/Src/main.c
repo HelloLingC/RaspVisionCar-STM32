@@ -69,6 +69,19 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+// SystemCoreClock 72000000
+#define SYSTICK_RELOAD_VAL (72000000 / 1000) - 1
+uint32_t get_systick_value(void)
+{
+    return SysTick->VAL;  // 直接读取 STK_VAL 寄存器
+}
+
+uint32_t get_tick_ms(void)
+{
+    // Get CPU cycles and convert to milliseconds
+    uint32_t cycles = DWT->CYCCNT;
+    return cycles / (SystemCoreClock / 1000);
+}
 /* USER CODE END 0 */
 
 /**
@@ -137,11 +150,15 @@ int main(void)
 
   HAL_Delay(1200);
 
-  //ff_set_target_rpm(150, 150); // 示例目标转速，可根据需要动态调整
+  // Enable DWT (Data Watchpoint and Trace) unit
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+  //ff_set_target_rpm(150, 150);
   // Motor_Set_Speed(30);
-  // Motor_Right_Set_Speed(0);
-  // Motor_Left_Set_Speed(0);
-  Motor_Left_GPIO_Forward();
+  Motor_Right_Set_Speed(30);
+  Motor_Left_Set_Speed(30);
 
   usart_log("System Initialized");
 
@@ -153,12 +170,13 @@ int main(void)
     // 处理树莓派通信buffer
     //rasp_comm_process();
 
-    // 每100ms更新一次编码器转速
+    // 每10ms更新一次编码器转速
+    uint32_t current_time = get_tick_ms();
     static uint32_t last_enc_time = 0;
-    if (HAL_GetTick() - last_enc_time >= 100) {
-      // encoder_update_100ms();
-      // int16_t l_rpm = 0, r_rpm = 0;
-      // encoder_get_motor_speed(&l_rpm, &r_rpm);
+    if (current_time - last_enc_time >= 10) {
+      encoder_update_10ms();
+      int16_t l_rpm = 0, r_rpm = 0;
+      encoder_get_motor_speed(&l_rpm, &r_rpm);
 
       // Update motor speed in feedforward controller
       //ff_update_100ms(l_rpm, r_rpm);
@@ -166,12 +184,13 @@ int main(void)
       // send_float_binary(l_rpm);
       // send_float_binary(r_rpm);
       // send_tail();
-      last_enc_time = HAL_GetTick();
+      last_enc_time = get_tick_ms();
     }
 
     // 定期输出系统状态
+    current_time = get_tick_ms();
     static uint32_t last_status_time = 0;
-    if (HAL_GetTick() - last_status_time > 1000) {
+    if (current_time - last_status_time > 1000) {
       
       // 更新OLED显示
       SSD1306_Fill(SSD1306_COLOR_BLACK);
@@ -183,10 +202,10 @@ int main(void)
       SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(35, 30);
       char time_str[12];
-      snprintf(time_str, sizeof(time_str), "%lus", HAL_GetTick() / 1000);
+      snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
-      encoder_update_100ms();
+      //encoder_update_100ms();
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
       SSD1306_GotoXY(0, 45);
@@ -195,7 +214,7 @@ int main(void)
       SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_UpdateScreen();
       
-      last_status_time = HAL_GetTick();
+      last_status_time = get_tick_ms();
     }
 
     /* USER CODE END WHILE */
