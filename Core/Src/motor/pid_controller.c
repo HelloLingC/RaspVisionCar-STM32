@@ -9,7 +9,7 @@ typedef struct {
     float right_integral;
 
     int16_t last_left_err; // e[n-1]
-    int16_t last_last_left_err; // e[n-2]
+    int16_t last_last_left_err; // e[n-2]adads
     int16_t last_right_err;
     int16_t last_last_right_err;
 

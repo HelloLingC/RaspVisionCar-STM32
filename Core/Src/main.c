@@ -156,9 +156,7 @@ int main(void)
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   //ff_set_target_rpm(150, 150);
-  // Motor_Set_Speed(30);
-  Motor_Right_Set_Speed(30);
-  Motor_Left_Set_Speed(30);
+  Motor_Set_Speed(30);
 
   usart_log("System Initialized");
 
