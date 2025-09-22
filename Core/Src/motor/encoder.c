@@ -20,11 +20,10 @@ void init_encoders(void) {
 	encoder_left.timer = encoder_timer_left;
 	encoder_left.last_count = (encoder_left.timer->Instance->CNT);
 	encoder_left.rpm = 0;
-	
+
 	encoder_right.timer = encoder_timer_right;
 	encoder_right.last_count = (encoder_right.timer->Instance->CNT);
 	encoder_right.rpm = 0;
-	
 	HAL_TIM_Encoder_Start(encoder_timer_left, TIM_CHANNEL_ALL);
 	HAL_TIM_Encoder_Start(encoder_timer_right, TIM_CHANNEL_ALL);
 }
@@ -49,9 +48,12 @@ static void encoder_update_one(Encoder_t* enc) {
 	enc->last_count = cnt;
 }
 
-// 应在100ms周期调用一次
+// 应在10ms周期调用一次
 void encoder_update_10ms(void) {
 	encoder_update_one(&encoder_left);
+	// I don't know why, but the left encoder is reversed
+	// Maybe the A/B wire is reversed
+	encoder_left.rpm = -encoder_left.rpm;
 	encoder_update_one(&encoder_right);
 }
 

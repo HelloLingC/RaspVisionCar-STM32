@@ -34,6 +34,7 @@
 #include "feedforward_controller.h"
 #include "delay.h"
 #include "encoder.h"
+#include "pid_controller.h"
 
 // Add this in your main.h or similar header file
 
@@ -81,6 +82,34 @@ uint32_t get_tick_ms(void)
     // Get CPU cycles and convert to milliseconds
     uint32_t cycles = DWT->CYCCNT;
     return cycles / (SystemCoreClock / 1000);
+}
+
+/*-------------------------------------------------------------------------------------------------------------------
+  @brief     利用Vofa发数据
+  @param     data1，data2，data3，data4，data5，data6，要发的数据放进入参即可
+  @return    null
+  Sample     Vofa_data(Err,Steer_Angle,set_speed_right,right_wheel,set_speed_left,left_wheel);
+  @note      如果不够用，继续往后加入参即可，继续加参数参考原则见下注释
+-------------------------------------------------------------------------------------------------------------------*/
+void Vofa_send_data(int data1, int data2, int data3, int data4, int data5, int data6) {
+    float tempFloat[6];
+    uint8_t tempData[28];
+
+    tempFloat[0] = (float)data1;
+    tempFloat[1] = (float)data2;
+    tempFloat[2] = (float)data3;
+    tempFloat[3] = (float)data4;
+    tempFloat[4] = (float)data5;
+    tempFloat[5] = (float)data6;
+
+    memcpy(tempData, (uint8_t *)tempFloat, sizeof(tempFloat));
+
+    tempData[24] = 0x00;
+    tempData[25] = 0x00;
+    tempData[26] = 0x80;
+    tempData[27] = 0x7f;
+
+    HAL_UART_Transmit(&huart1, tempData, 28, HAL_MAX_DELAY);
 }
 /* USER CODE END 0 */
 
@@ -156,7 +185,9 @@ int main(void)
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   //ff_set_target_rpm(150, 150);
-  Motor_Set_Speed(30);
+  pid_init_default();
+  int16_t target_rpm = 100;
+  pid_set_target_rpm(target_rpm, target_rpm);
 
   usart_log("System Initialized");
 
@@ -173,24 +204,28 @@ int main(void)
     static uint32_t last_enc_time = 0;
     if (current_time - last_enc_time >= 10) {
       encoder_update_10ms();
+
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
 
-      // Update motor speed in feedforward controller
-      //ff_update_100ms(l_rpm, r_rpm);
-
-      // send_float_binary(l_rpm);
-      // send_float_binary(r_rpm);
-      // send_tail();
+      pid_update_10ms(l_rpm, r_rpm);
       last_enc_time = get_tick_ms();
     }
 
-    // 定期输出系统状态
+    current_time = get_tick_ms();
+    uint32_t last_vofa_time = 0;
+    if (current_time - last_vofa_time >= 100) {
+      int16_t l_rpm = 0, r_rpm = 0;
+      encoder_get_motor_speed(&l_rpm, &r_rpm);
+
+      Vofa_send_data(target_rpm, l_rpm, r_rpm, 0, 0, 0);
+      last_vofa_time = get_tick_ms();
+    }
+
+    // Update OLED display
     current_time = get_tick_ms();
     static uint32_t last_status_time = 0;
     if (current_time - last_status_time > 1000) {
-      
-      // 更新OLED显示
       SSD1306_Fill(SSD1306_COLOR_BLACK);
       SSD1306_GotoXY(0, 0);
       SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);

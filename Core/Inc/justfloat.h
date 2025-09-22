@@ -2,20 +2,21 @@
 #include "main.h"
 
 struct Frame {
-    float fdata[CH_COUNT];
-    unsigned char tail[4];
+	float fdata[CH_COUNT];
+	unsigned char tail[4];
 };
 
 // Structure to hold float as bytes
 typedef union {
-    float f;
-    uint8_t bytes[4];
+	float f;
+	uint8_t bytes[4];
 } float_union_t;
 
 void send_float_binary(float data);
-void send_tail();
-void send_frame(struct Frame frame);
-void send_to_serial(char *ptr);
+void send_tail(void);
+void send_frame(const struct Frame *frame);
+void send_frame_data(const float *data);
+void send_to_serial(const char *ptr);
 
 // 数据解析函数
 int parse_frame(uint8_t *buffer, int buffer_len, struct Frame *frame);

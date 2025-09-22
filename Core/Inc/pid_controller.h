@@ -18,7 +18,7 @@ void pid_init(const PID_Params* left_params, const PID_Params* right_params);
 void pid_set_target_rpm(int16_t left_target_rpm, int16_t right_target_rpm);
 
 // Call every 100 ms with measured RPM; internally sets Motor_* speeds
-void pid_update_100ms(int16_t left_meas_rpm, int16_t right_meas_rpm);
+void pid_update_10ms(int16_t left_meas_rpm, int16_t right_meas_rpm);
 
 // Optional helpers
 void pid_reset(void);
