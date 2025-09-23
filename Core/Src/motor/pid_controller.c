@@ -2,26 +2,6 @@
 #include "motor_left.h"
 #include "motor_right.h"
 
-typedef struct {
-    PID_Params left_params;
-    PID_Params right_params;
-    float left_integral;
-    float right_integral;
-
-    int16_t last_left_err; // e[n-1]
-    int16_t last_last_left_err; // e[n-2]adads
-    int16_t last_right_err;
-    int16_t last_last_right_err;
-
-    float last_left_output;
-    float last_right_output;
-
-    int16_t target_left_rpm;
-    int16_t target_right_rpm;
-} PID_Handle;
-
-static PID_Handle s_pid;
-
 static float clampf(float x, float limit_abs)
 {
     if (x > limit_abs) return limit_abs;
@@ -29,12 +9,14 @@ static float clampf(float x, float limit_abs)
     return x;
 }
 
+PID_Handle s_pid;
+
 void pid_init_default(void)
 {
     PID_Params left_p = {
         .kP = 0.6f,
         .kI = 0.0f,
-        .kD = 0.3f,
+        .kD = 0.0f,
         .integrator_limit = 50.0f,
         .output_limit = 100.0f,
     };
@@ -57,8 +39,6 @@ void pid_init(const PID_Params* left_p, const PID_Params* right_p)
 
 void pid_reset(void)
 {
-    s_pid.left_integral = 0.0f;
-    s_pid.right_integral = 0.0f;
     s_pid.target_left_rpm = 0;
     s_pid.target_right_rpm = 0;
 
@@ -81,10 +61,10 @@ void pid_compute_one(int16_t left_meas_rpm, int16_t right_meas_rpm,
 
     int16_t l_err = s_pid.target_left_rpm - left_meas_rpm;
     int16_t r_err = s_pid.target_right_rpm - right_meas_rpm;
+    s_pid.left_err = l_err;
 
     // 增量式PID计算
-    float l_delta = s_pid.left_params.kP * (l_err - s_pid.last_left_err) +
-                    s_pid.left_params.kD * (l_err - 2 * s_pid.last_left_err + s_pid.last_last_left_err) / dt;
+    float l_delta = s_pid.left_params.kP * (l_err - s_pid.last_left_err);
     float r_delta = 0;
 
     // 更新输出
@@ -92,8 +72,8 @@ void pid_compute_one(int16_t left_meas_rpm, int16_t right_meas_rpm,
     float r_pwm = s_pid.last_right_output + r_delta;
 
     // 限幅
-    l_pwm = clampf(l_pwm, s_pid.left_params.output_limit);
-    r_pwm = clampf(r_pwm, s_pid.right_params.output_limit);
+    // l_pwm = clampf(l_pwm, s_pid.left_params.output_limit);
+    // r_pwm = clampf(r_pwm, s_pid.right_params.output_limit);
 
     // 更新状态
     s_pid.last_last_left_err = s_pid.last_left_err;

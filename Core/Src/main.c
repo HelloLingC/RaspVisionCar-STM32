@@ -204,51 +204,47 @@ int main(void)
     static uint32_t last_enc_time = 0;
     if (current_time - last_enc_time >= 10) {
       encoder_update_10ms();
-
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
-
-      pid_update_10ms(l_rpm, r_rpm);
       last_enc_time = get_tick_ms();
     }
 
-    current_time = get_tick_ms();
-    uint32_t last_vofa_time = 0;
-    if (current_time - last_vofa_time >= 100) {
+    static uint32_t last_pid_time = 0;
+    if (current_time - last_pid_time >= 20) {
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
-
-      Vofa_send_data(target_rpm, l_rpm, r_rpm, 0, 0, 0);
-      last_vofa_time = get_tick_ms();
+      pid_update_10ms(l_rpm, r_rpm);
+      Vofa_send_data(target_rpm, l_rpm, r_rpm, s_pid.left_err, 0, 0);
+      last_pid_time = get_tick_ms();
     }
 
     // Update OLED display
-    current_time = get_tick_ms();
-    static uint32_t last_status_time = 0;
-    if (current_time - last_status_time > 1000) {
-      SSD1306_Fill(SSD1306_COLOR_BLACK);
-      SSD1306_GotoXY(0, 0);
-      SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 15);
-      SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 30);
-      SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(35, 30);
-      char time_str[12];
-      snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
-      SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
+    // current_time = get_tick_ms();
+    // static uint32_t last_status_time = 0;
+    // if (current_time - last_status_time > 1000) {
+    //   SSD1306_Fill(SSD1306_COLOR_BLACK);
+    //   SSD1306_GotoXY(0, 0);
+    //   SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
+    //   SSD1306_GotoXY(0, 15);
+    //   SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
+    //   SSD1306_GotoXY(0, 30);
+    //   SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
+    //   SSD1306_GotoXY(35, 30);
+    //   char time_str[12];
+    //   snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
+    //   SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
-      //encoder_update_100ms();
-      int16_t l_rpm = 0, r_rpm = 0;
-      encoder_get_motor_speed(&l_rpm, &r_rpm);
-      SSD1306_GotoXY(0, 45);
-      char speed_str[18];
-      snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
-      SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_UpdateScreen();
+    //   //encoder_update_100ms();
+    //   int16_t l_rpm = 0, r_rpm = 0;
+    //   encoder_get_motor_speed(&l_rpm, &r_rpm);
+    //   SSD1306_GotoXY(0, 45);
+    //   char speed_str[18];
+    //   snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
+    //   SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
+    //   SSD1306_UpdateScreen();
       
-      last_status_time = get_tick_ms();
-    }
+    //   last_status_time = get_tick_ms();
+    // }
 
     /* USER CODE END WHILE */
 

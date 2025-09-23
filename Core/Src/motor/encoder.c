@@ -12,6 +12,7 @@ typedef struct {
     TIM_HandleTypeDef* timer;
 	uint16_t last_count;
 	int16_t rpm;
+	int16_t filter_rpm[5];
 } Encoder_t;
 
 static Encoder_t encoder_left, encoder_right;
@@ -30,7 +31,7 @@ void init_encoders(void) {
 
 static void encoder_update_one(Encoder_t* enc) {
 	uint16_t cnt = enc->timer->Instance->CNT; // 0 ~ 65535
-	int16_t diff = (int16_t)(cnt - enc->last_count);
+	int32_t diff = (int32_t)(cnt - enc->last_count);
 
 	if (diff > 32767) {
         diff -= 65536;  // Negative overflow
@@ -38,23 +39,32 @@ static void encoder_update_one(Encoder_t* enc) {
         diff += 65536;  // Positive overflow
     }
 
-	int16_t pulse_per_sec = diff * 100.0f; // 10ms 调用一次 -> ×100 得到每秒脉冲数
+	int32_t pulse_per_sec = diff * 100.0f; // 10ms 调用一次 -> ×100 得到每秒脉冲数
 	// 4倍频模式（Encoder Mode: TI12），实际每转脉冲数 = PPR × 4
 	float rpm_f = (float)pulse_per_sec * 60.0f / (float)(ENCODER_PPR * 4);
     // MGX513X 减速比 28:1
     rpm_f = rpm_f / MOTOR_GEAR_RATIO;
 
-	enc->rpm = (int16_t)rpm_f;
+	// 平均值滤波
+	enc->filter_rpm[0] = enc->filter_rpm[1];
+	enc->filter_rpm[1] = enc->filter_rpm[2];
+	enc->filter_rpm[2] = enc->filter_rpm[3];
+	enc->filter_rpm[3] = enc->filter_rpm[4];
+	enc->filter_rpm[4] = rpm_f;
+	int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
+
+	enc->rpm = (int16_t)filtered_rpm;
 	enc->last_count = cnt;
 }
 
 // 应在10ms周期调用一次
 void encoder_update_10ms(void) {
 	encoder_update_one(&encoder_left);
+	encoder_update_one(&encoder_right);
 	// I don't know why, but the left encoder is reversed
 	// Maybe the A/B wire is reversed
 	encoder_left.rpm = -encoder_left.rpm;
-	encoder_update_one(&encoder_right);
+	encoder_right.rpm = -encoder_right.rpm;
 }
 
 void encoder_get_motor_speed(int16_t* left_speed_rpm, int16_t* right_speed_rpm)

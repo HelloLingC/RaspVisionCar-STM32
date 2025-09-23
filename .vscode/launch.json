@@ -8,7 +8,7 @@
       "request": "launch",
       "type": "cortex-debug",
       "servertype": "external",
-      "gdbTarget": "192.168.156.107:3333",
+      "gdbTarget": "192.168.149.107:3333",
       "gdbPath": "arm-none-eabi-gdb",
       "device": "STM32F103C8",
       "runToEntryPoint": "main",
