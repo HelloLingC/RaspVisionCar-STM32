@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -148,6 +147,7 @@ int main(void)
   MX_TIM4_Init();
   MX_I2C1_Init();
   MX_USART2_UART_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   // 编码器初始化
@@ -189,6 +189,8 @@ int main(void)
   int16_t target_rpm = 100;
   pid_set_target_rpm(target_rpm, target_rpm);
 
+  HAL_TIM_Base_Start_IT(&htim1);
+
   usart_log("System Initialized");
 
   /* USER CODE END 2 */
@@ -199,27 +201,8 @@ int main(void)
     // 处理树莓派通信buffer
     //rasp_comm_process();
 
-    // 每10ms更新一次编码器转速
-    uint32_t current_time = get_tick_ms();
-    static uint32_t last_enc_time = 0;
-    if (current_time - last_enc_time >= 10) {
-      encoder_update_10ms();
-      int16_t l_rpm = 0, r_rpm = 0;
-      encoder_get_motor_speed(&l_rpm, &r_rpm);
-      last_enc_time = get_tick_ms();
-    }
-
-    static uint32_t last_pid_time = 0;
-    if (current_time - last_pid_time >= 20) {
-      int16_t l_rpm = 0, r_rpm = 0;
-      encoder_get_motor_speed(&l_rpm, &r_rpm);
-      pid_update_10ms(l_rpm, r_rpm);
-      Vofa_send_data(target_rpm, l_rpm, r_rpm, s_pid.left_err, 0, 0);
-      last_pid_time = get_tick_ms();
-    }
-
     // Update OLED display
-    // current_time = get_tick_ms();
+    // uint32_t current_time = get_tick_ms();
     // static uint32_t last_status_time = 0;
     // if (current_time - last_status_time > 1000) {
     //   SSD1306_Fill(SSD1306_COLOR_BLACK);
@@ -293,6 +276,16 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if(htim->Instance == TIM1) { // TIM1: 10ms Interrupt
+      encoder_update_10ms();
+      int16_t l_rpm = 0, r_rpm = 0;
+      encoder_get_motor_speed(&l_rpm, &r_rpm);
+      pid_update_10ms(l_rpm, r_rpm);
+      Vofa_send_data(100, l_rpm, r_rpm, s_pid.left_err, 0, 0);
+    }
+}
 
 /* USER CODE END 4 */
 

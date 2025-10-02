@@ -21,10 +21,19 @@ void init_encoders(void) {
 	encoder_left.timer = encoder_timer_left;
 	encoder_left.last_count = (encoder_left.timer->Instance->CNT);
 	encoder_left.rpm = 0;
+	// Initialize filter array to prevent garbage values
+	for (int i = 0; i < 5; i++) {
+		encoder_left.filter_rpm[i] = 0;
+	}
 
 	encoder_right.timer = encoder_timer_right;
 	encoder_right.last_count = (encoder_right.timer->Instance->CNT);
 	encoder_right.rpm = 0;
+	// Initialize filter array to prevent garbage values
+	for (int i = 0; i < 5; i++) {
+		encoder_right.filter_rpm[i] = 0;
+	}
+	
 	HAL_TIM_Encoder_Start(encoder_timer_left, TIM_CHANNEL_ALL);
 	HAL_TIM_Encoder_Start(encoder_timer_right, TIM_CHANNEL_ALL);
 }
@@ -46,14 +55,14 @@ static void encoder_update_one(Encoder_t* enc) {
     rpm_f = rpm_f / MOTOR_GEAR_RATIO;
 
 	// 平均值滤波
-	enc->filter_rpm[0] = enc->filter_rpm[1];
-	enc->filter_rpm[1] = enc->filter_rpm[2];
-	enc->filter_rpm[2] = enc->filter_rpm[3];
-	enc->filter_rpm[3] = enc->filter_rpm[4];
-	enc->filter_rpm[4] = rpm_f;
-	int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
+	// enc->filter_rpm[0] = enc->filter_rpm[1];
+	// enc->filter_rpm[1] = enc->filter_rpm[2];
+	// enc->filter_rpm[2] = enc->filter_rpm[3];
+	// enc->filter_rpm[3] = enc->filter_rpm[4];
+	// enc->filter_rpm[4] = rpm_f;
+	// int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
 
-	enc->rpm = (int16_t)filtered_rpm;
+	enc->rpm = (int16_t)rpm_f;
 	enc->last_count = cnt;
 }
 

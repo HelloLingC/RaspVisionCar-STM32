@@ -28,7 +28,7 @@ typedef struct {
     int16_t target_right_rpm;
 } PID_Handle;
 
-extern PID_Handle s_pid;
+extern volatile PID_Handle s_pid;
 
 void pid_init_default(void);
 void pid_init(const PID_Params* left_params, const PID_Params* right_params);

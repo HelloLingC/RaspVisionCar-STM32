@@ -64,6 +64,19 @@
     "motor_right.h": "c",
     "encoder.h": "c",
     "pid_controller.h": "c",
-    "stm32f1xx_hal.h": "c"
+    "stm32f1xx_hal.h": "c",
+    "tim.h": "c",
+    "rasp_comm.h": "c",
+    "i2c.h": "c",
+    "build_info.h": "c",
+    "cjson.h": "c",
+    "stdio.h": "c",
+    "usart.h": "c",
+    "bit": "c",
+    "compare": "c",
+    "limits": "c",
+    "new": "c",
+    "stm32f1xx_hal_tim_ex.h": "c",
+    "cstdlib": "c"
   }
 }
