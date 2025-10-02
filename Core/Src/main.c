@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -184,12 +185,14 @@ int main(void)
   DWT->CYCCNT = 0;
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
-  //ff_set_target_rpm(150, 150);
   pid_init_default();
   int16_t target_rpm = 100;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
+  // 启动比较中断
+  HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
 
   usart_log("System Initialized");
 
@@ -202,32 +205,32 @@ int main(void)
     //rasp_comm_process();
 
     // Update OLED display
-    // uint32_t current_time = get_tick_ms();
-    // static uint32_t last_status_time = 0;
-    // if (current_time - last_status_time > 1000) {
-    //   SSD1306_Fill(SSD1306_COLOR_BLACK);
-    //   SSD1306_GotoXY(0, 0);
-    //   SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
-    //   SSD1306_GotoXY(0, 15);
-    //   SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
-    //   SSD1306_GotoXY(0, 30);
-    //   SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
-    //   SSD1306_GotoXY(35, 30);
-    //   char time_str[12];
-    //   snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
-    //   SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
+    uint32_t current_time = get_tick_ms();
+    static uint32_t last_status_time = 0;
+    if (current_time - last_status_time > 1000) {
+      SSD1306_Fill(SSD1306_COLOR_BLACK);
+      SSD1306_GotoXY(0, 0);
+      SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 15);
+      SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 30);
+      SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(35, 30);
+      char time_str[12];
+      snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
+      SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
-    //   //encoder_update_100ms();
-    //   int16_t l_rpm = 0, r_rpm = 0;
-    //   encoder_get_motor_speed(&l_rpm, &r_rpm);
-    //   SSD1306_GotoXY(0, 45);
-    //   char speed_str[18];
-    //   snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
-    //   SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
-    //   SSD1306_UpdateScreen();
+      //encoder_update_100ms();
+      int16_t l_rpm = 0, r_rpm = 0;
+      encoder_get_motor_speed(&l_rpm, &r_rpm);
+      SSD1306_GotoXY(0, 45);
+      char speed_str[18];
+      snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
+      SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_UpdateScreen();
       
-    //   last_status_time = get_tick_ms();
-    // }
+      last_status_time = get_tick_ms();
+    }
 
     /* USER CODE END WHILE */
 
@@ -278,13 +281,29 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    if(htim->Instance == TIM1) { // TIM1: 10ms Interrupt
-      encoder_update_10ms();
-      int16_t l_rpm = 0, r_rpm = 0;
-      encoder_get_motor_speed(&l_rpm, &r_rpm);
-      pid_update_10ms(l_rpm, r_rpm);
-      Vofa_send_data(100, l_rpm, r_rpm, s_pid.left_err, 0, 0);
+    if(htim->Instance == TIM1) { // TIM1: 1000ms Interrupt
     }
+}
+
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if(htim->Instance == TIM1)
+  {
+    switch(htim->Channel)
+    {
+      case HAL_TIM_ACTIVE_CHANNEL_1:
+        // 10ms任务
+        encoder_update_10ms();
+        break;
+      case HAL_TIM_ACTIVE_CHANNEL_4:
+        // 20ms任务
+        int16_t l_rpm = 0, r_rpm = 0;
+        encoder_get_motor_speed(&l_rpm, &r_rpm);
+        pid_update_10ms(l_rpm, r_rpm);
+        Vofa_send_data(100, l_rpm, r_rpm, s_pid.left_err, 0, 0);
+        break;
+    }
+  }
 }
 
 /* USER CODE END 4 */

@@ -3,7 +3,7 @@
 #include "encoder.h"
 
 #define ENCODER_PPR 13
-#define MOTOR_GEAR_RATIO 28.0f
+#define MOTOR_GEAR_RATIO 28.0
 
 #define encoder_timer_left &htim2
 #define encoder_timer_right &htim4
@@ -41,6 +41,7 @@ void init_encoders(void) {
 static void encoder_update_one(Encoder_t* enc) {
 	uint16_t cnt = enc->timer->Instance->CNT; // 0 ~ 65535
 	int32_t diff = (int32_t)(cnt - enc->last_count);
+	//int32_t diff = diff * 4;
 
 	if (diff > 32767) {
         diff -= 65536;  // Negative overflow
@@ -48,32 +49,28 @@ static void encoder_update_one(Encoder_t* enc) {
         diff += 65536;  // Positive overflow
     }
 
-	int32_t pulse_per_sec = diff * 100.0f; // 10ms 调用一次 -> ×100 得到每秒脉冲数
-	// 4倍频模式（Encoder Mode: TI12），实际每转脉冲数 = PPR × 4
-	float rpm_f = (float)pulse_per_sec * 60.0f / (float)(ENCODER_PPR * 4);
+	int32_t pulse_per_sec = diff; // 10ms 调用一次 -> ×100 得到每秒脉冲数
+	// 4倍频模式（Encoder Mode: T1 T2），实际每转脉冲数 = PPR / 4
+	int32_t rpm_f = pulse_per_sec * 60 / (ENCODER_PPR * 4);
     // MGX513X 减速比 28:1
     rpm_f = rpm_f / MOTOR_GEAR_RATIO;
 
 	// 平均值滤波
-	// enc->filter_rpm[0] = enc->filter_rpm[1];
-	// enc->filter_rpm[1] = enc->filter_rpm[2];
-	// enc->filter_rpm[2] = enc->filter_rpm[3];
-	// enc->filter_rpm[3] = enc->filter_rpm[4];
-	// enc->filter_rpm[4] = rpm_f;
-	// int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
+	for (int i = 0; i < 4; i++) {
+        enc->filter_rpm[i] = enc->filter_rpm[i+1];
+    }
+    enc->filter_rpm[4] = (int16_t)rpm_f;
 
-	enc->rpm = (int16_t)rpm_f;
+	int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
+	enc->rpm = filtered_rpm;
 	enc->last_count = cnt;
 }
 
-// 应在10ms周期调用一次
 void encoder_update_10ms(void) {
 	encoder_update_one(&encoder_left);
 	encoder_update_one(&encoder_right);
-	// I don't know why, but the left encoder is reversed
-	// Maybe the A/B wire is reversed
+	// the left encoder value is negative, so we need to reverse it
 	encoder_left.rpm = -encoder_left.rpm;
-	encoder_right.rpm = -encoder_right.rpm;
 }
 
 void encoder_get_motor_speed(int16_t* left_speed_rpm, int16_t* right_speed_rpm)

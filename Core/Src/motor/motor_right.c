@@ -12,8 +12,8 @@ void Motor_Right_Set_Speed(int8_t speed) {
   // 限制速度范围
   speed = (speed < -100) ? -100 : (speed > 100) ? 100 : speed;
   
-  // 计算PWM占空比
-  uint16_t pwm_value = (abs(speed) * (htim3.Init.Period + 1)) / 100;
+  // CCRv
+  uint16_t pwm_value = abs(speed) * (htim3.Init.Period + 1) / 100;
   
   if (speed > 0) {
     // 正转 Forward
@@ -30,8 +30,6 @@ void Motor_Right_Set_Speed(int8_t speed) {
   
   // Set PWM value
   __HAL_TIM_SET_COMPARE(MOTOR_B_TIMER, TIM_CHANNEL_2, pwm_value);
-  
-  //hmotor.current_speed = speed;
 }
 
 void Motor_Right_ALL_RESET(void) {
