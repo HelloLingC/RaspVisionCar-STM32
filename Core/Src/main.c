@@ -186,8 +186,9 @@ int main(void)
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 100;
+  int16_t target_rpm = 120;
   pid_set_target_rpm(target_rpm, target_rpm);
+  //Motor_Set_Speed(40);
 
   HAL_TIM_Base_Start_IT(&htim1);
   // 启动比较中断
@@ -294,13 +295,14 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
       case HAL_TIM_ACTIVE_CHANNEL_1:
         // 10ms任务
         encoder_update_10ms();
-        break;
-      case HAL_TIM_ACTIVE_CHANNEL_4:
-        // 20ms任务
         int16_t l_rpm = 0, r_rpm = 0;
         encoder_get_motor_speed(&l_rpm, &r_rpm);
         pid_update_10ms(l_rpm, r_rpm);
-        Vofa_send_data(100, l_rpm, r_rpm, s_pid.left_err, 0, 0);
+        break;
+      case HAL_TIM_ACTIVE_CHANNEL_4:
+        // 20ms任务
+        encoder_get_motor_speed(&l_rpm, &r_rpm);
+        Vofa_send_data(s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm, s_pid.left_err, 0);
         break;
     }
   }

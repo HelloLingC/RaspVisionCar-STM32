@@ -10,14 +10,14 @@ static float clampf(float x, float limit_abs)
     return x;
 }
 
-volatile PID_Handle s_pid;
+PID_Handle s_pid;
 
 extern TIM_HandleTypeDef htim1;
 
 void pid_init_default(void)
 {
     PID_Params left_p = {
-        .kP = 0.6f,
+        .kP = 0.9f,
         .kI = 0.3f,
         .kD = 0.0f,
         .integrator_limit = 50.0f,
