@@ -3,7 +3,7 @@
 
 #include "main.h"
 #include "usart.h"
-#include "cJSON.h"
+// #include "cJSON.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,10 +11,8 @@
 // 通信协议配置
 #define MAX_CMD_LENGTH 256
 #define MAX_RESPONSE_LENGTH 128
-#define CMD_PREFIX "CMD:"
-#define ACK_PREFIX "ACK:"
-#define ERR_PREFIX "ERR:"
-#define LOG_PREFIX "LOG:"
+
+#define LOG_PREFIX "RASP_COMM:"
 
 // 命令类型枚举
 typedef enum {
@@ -25,18 +23,11 @@ typedef enum {
     CMD_UNKNOWN     // 未知命令
 } cmd_type_t;
 
-// 命令参数结构体
-typedef struct {
-    int speed;      // 速度参数
-    int angle;      // 角度参数
-    char direction[16]; // 方向参数
-} cmd_params_t;
-
 // 命令结构体
 typedef struct {
-    char cmd[8];            // 命令字符串
+    char cmd[16];            // 命令字符串
+    char params[32];        // 参数
     double timestamp;       // 时间戳
-    cmd_params_t params;    // 参数
 } rasp_command_t;
 
 // 响应结构体
@@ -55,10 +46,8 @@ int rasp_parse_command(const char* json_str, rasp_command_t* cmd);
 void rasp_execute_command(const rasp_command_t* cmd);
 
 // 命令处理函数
-void handle_motor_forward(const cmd_params_t* params);
-void handle_motor_turn(const cmd_params_t* params);
-void handle_buzzer(const cmd_params_t* params);
-void handle_speaker(const cmd_params_t* params);
+void handle_motor_forward(const char* params);
+void handle_motor_turn(const char* params);
 
 // USART printf
 void usart_log(const char *format, ...);

@@ -35,6 +35,7 @@
 #include "delay.h"
 #include "encoder.h"
 #include "pid_controller.h"
+#include "buzzer.h"
 
 float PID_Calc(float current);
 void Motor_Left_Set_Raw_Speed(uint16_t pwm_value);
@@ -197,7 +198,9 @@ int main(void)
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
 
-  usart_log("System Initialized");
+  buzzer_on(150);
+
+  // usart_log("System Initialized");
 
   /* USER CODE END 2 */
 
@@ -206,6 +209,7 @@ int main(void)
   while (1) {
     // 处理树莓派通信buffer
     //rasp_comm_process();
+    buzzer_update();
 
     // Update OLED display
     uint32_t current_time = get_tick_ms();
@@ -223,7 +227,6 @@ int main(void)
       snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
-      //encoder_update_100ms();
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
       SSD1306_GotoXY(0, 45);

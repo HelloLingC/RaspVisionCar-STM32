@@ -1,6 +1,6 @@
 #include "rasp_comm.h"
 #include "motor.h"
-#include "cJSON.h"
+// #include "cJSON.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -25,155 +25,43 @@ void rasp_comm_init(void) {
 void rasp_comm_process(void) {
     if (rx_complete) {
         rx_buffer[rx_index] = '\0'; // 确保字符串结束
-        
-        // 检查是否是命令前缀
-        if (strncmp((char*)rx_buffer, CMD_PREFIX, strlen(CMD_PREFIX)) == 0) {
-            char* json_start = (char*)rx_buffer + strlen(CMD_PREFIX);
-            
-            usart_debug("收到命令: %s", json_start);
-            
-            rasp_command_t cmd;
-            if (rasp_parse_command(json_start, &cmd) == 0) {
-                usart_info("执行命令: %s", cmd.cmd);
-                rasp_execute_command(&cmd);
-            } else {
-                usart_error("JSON解析失败: %s", json_start);
-                rasp_send_error("JSON解析失败");
-            }
+
+        rasp_command_t cmd;
+        if (rasp_parse_command(rx_buffer, &cmd) == 1) {
+            rasp_execute_command(&cmd);
         } else {
-            usart_debug("收到非命令数据: %s", (char*)rx_buffer);
+            // usart_error("JSON解析失败: %s", rx_buffer);
         }
-        
+
         // 重置接收状态
         rx_index = 0;
         rx_complete = 0;
         memset(rx_buffer, 0, MAX_CMD_LENGTH);
         
-        // 重新启动接收
+        // Continue UART receive
         HAL_UART_Receive_IT(&huart1, &rx_buffer[rx_index], 1);
     }
 }
 
-// 发送ACK响应
-void rasp_send_ack(const char* data) {
-    // 创建JSON响应对象
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddStringToObject(json, "status", "ok");
-    cJSON_AddStringToObject(json, "data", data);
-    
-    // 生成JSON字符串
-    char *json_string = cJSON_PrintUnformatted(json);
-    if (json_string != NULL) {
-        char response[MAX_RESPONSE_LENGTH];
-        snprintf(response, sizeof(response), "%s%s\n", ACK_PREFIX, json_string);
-        HAL_UART_Transmit(&huart1, (uint8_t*)response, strlen(response), HAL_MAX_DELAY);
-        
-        // 释放内存
-        cJSON_free(json_string);
-    }
-    
-    // 清理JSON对象
-    cJSON_Delete(json);
-}
-
-// 发送带额外数据的ACK响应
-void rasp_send_ack_with_data(const char* data, const char* key, const char* value) {
-    // 创建JSON响应对象
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddStringToObject(json, "status", "ok");
-    cJSON_AddStringToObject(json, "data", data);
-    cJSON_AddStringToObject(json, key, value);
-    
-    // 生成JSON字符串
-    char *json_string = cJSON_PrintUnformatted(json);
-    if (json_string != NULL) {
-        char response[MAX_RESPONSE_LENGTH];
-        snprintf(response, sizeof(response), "%s%s\n", ACK_PREFIX, json_string);
-        HAL_UART_Transmit(&huart1, (uint8_t*)response, strlen(response), HAL_MAX_DELAY);
-        
-        // 释放内存
-        cJSON_free(json_string);
-    }
-    
-    // 清理JSON对象
-    cJSON_Delete(json);
-}
-
-// 发送错误响应
-void rasp_send_error(const char* error_msg) {
-    // 创建JSON错误响应对象
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddStringToObject(json, "status", "error");
-    cJSON_AddStringToObject(json, "message", error_msg);
-    
-    // 生成JSON字符串
-    char *json_string = cJSON_PrintUnformatted(json);
-    if (json_string != NULL) {
-        char response[MAX_RESPONSE_LENGTH];
-        snprintf(response, sizeof(response), "%s%s\n", ERR_PREFIX, json_string);
-        HAL_UART_Transmit(&huart1, (uint8_t*)response, strlen(response), HAL_MAX_DELAY);
-        
-        // 释放内存
-        cJSON_free(json_string);
-    }
-    
-    // 清理JSON对象
-    cJSON_Delete(json);
-}
-
-// 使用cJSON的JSON解析器
-int rasp_parse_command(const char* json_str, rasp_command_t* cmd) {
+// I was planning to use cJSON at the beginning, but it's too heavy for this project
+int rasp_parse_command(const char* raw_str, rasp_command_t* cmd) {
     // 初始化命令结构体
     memset(cmd, 0, sizeof(rasp_command_t));
-    
-    // 解析JSON
-    cJSON *json = cJSON_Parse(json_str);
-    if (json == NULL) {
-        return -1; // JSON解析失败
-    }
-    
-    // 解析cmd字段
-    cJSON *cmd_item = cJSON_GetObjectItem(json, "cmd");
-    if (cJSON_IsString(cmd_item) && (cmd_item->valuestring != NULL)) {
-        strncpy(cmd->cmd, cmd_item->valuestring, sizeof(cmd->cmd) - 1);
-        cmd->cmd[sizeof(cmd->cmd) - 1] = '\0';
-    } else {
-        cJSON_Delete(json);
-        return -1;
-    }
-    
-    // 解析timestamp字段
-    cJSON *timestamp_item = cJSON_GetObjectItem(json, "timestamp");
-    if (cJSON_IsNumber(timestamp_item)) {
-        cmd->timestamp = timestamp_item->valuedouble;
-    }
-    
-    // 解析params字段
-    cJSON *params_item = cJSON_GetObjectItem(json, "params");
-    if (cJSON_IsObject(params_item)) {
-        // 解析speed参数
-        cJSON *speed_item = cJSON_GetObjectItem(params_item, "speed");
-        if (cJSON_IsNumber(speed_item)) {
-            cmd->params.speed = (int)speed_item->valuedouble;
+    uint8_t cmd_idx = 0;
+    char* cmd_str = malloc(MAX_CMD_LENGTH);
+
+    for(int i = 0; raw_str[i] != '\0'; i++) {
+        if(raw_str[i]== ',' || raw_str[i] == ' ' || raw_str[i] == '\n') {
+            continue;
         }
-        
-        // 解析angle参数
-        cJSON *angle_item = cJSON_GetObjectItem(params_item, "angle");
-        if (cJSON_IsNumber(angle_item)) {
-            cmd->params.angle = (int)angle_item->valuedouble;
+        if(raw_str[i] == ':') {
+            continue;
         }
-        
-        // 解析direction参数
-        cJSON *direction_item = cJSON_GetObjectItem(params_item, "direction");
-        if (cJSON_IsString(direction_item) && (direction_item->valuestring != NULL)) {
-            strncpy(cmd->params.direction, direction_item->valuestring, sizeof(cmd->params.direction) - 1);
-            cmd->params.direction[sizeof(cmd->params.direction) - 1] = '\0';
-        }
+        cmd_str[cmd_idx++] = raw_str[i];
+
     }
-    
-    // 清理JSON对象
-    cJSON_Delete(json);
-    return 0;
+
+    return 1;
 }
 
 // 执行命令
@@ -226,19 +114,6 @@ void handle_motor_turn(const cmd_params_t* params) {
     } else {
         rasp_send_error("速度参数超出范围(0-100)");
     }
-}
-
-// 处理蜂鸣器命令
-void handle_buzzer(const cmd_params_t* params) {
-    // TODO: 实现蜂鸣器控制
-    // 这里可以控制GPIO引脚来驱动蜂鸣器
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // 使用LED作为示例
-}
-
-// 处理声音命令
-void handle_speaker(const cmd_params_t* params) {
-    // TODO: 实现声音播放
-    // 这里可以控制PWM或DAC来播放声音
 }
 
 // UART接收完成 1byte 回调函数
