@@ -14,11 +14,11 @@ void rasp_comm_init(void) {
     rx_index = 0;
     rx_complete = 0;
     memset(rx_buffer, 0, MAX_CMD_LENGTH);
-    
+
     // 启动UART接收中断
     HAL_UART_Receive_IT(&huart1, &rx_buffer[rx_index], 1);
-    
-    usart_info("树莓派通信协议初始化完成");
+
+    // usart_info("树莓派通信协议初始化完成");
 }
 
 // 处理接收到的数据

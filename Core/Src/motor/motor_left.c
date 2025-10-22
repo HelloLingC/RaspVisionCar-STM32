@@ -3,6 +3,13 @@
 
 #include <stdlib.h>
 
+void Motor_Left_Set_Raw_Speed(uint16_t pwm_value) {
+  pwm_value = (pwm_value < -1000) ? -1000 : (pwm_value > 1000) ? 1000 : pwm_value;
+  HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_RESET);
+  __HAL_TIM_SET_COMPARE(MOTOR_A_TIMER, TIM_CHANNEL_1, pwm_value);
+}
+
 /**
  * @brief 设置电机速度和方向
  * @param speed: 速度值 (-100 到 100)

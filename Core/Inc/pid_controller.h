@@ -15,7 +15,9 @@ typedef struct {
     PID_Params left_params;
     PID_Params right_params;
 
-    int16_t left_err;
+    int16_t left_integral;
+    int16_t right_integral;
+
     int16_t last_left_err; // e[n-1]
     int16_t last_last_left_err; // e[n-2]
     int16_t last_right_err;
