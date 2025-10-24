@@ -52,9 +52,16 @@ int rasp_parse_command(const char* raw_str, rasp_command_t* cmd) {
 
     for(int i = 0; raw_str[i] != '\0'; i++) {
         if(raw_str[i]== ',' || raw_str[i] == ' ' || raw_str[i] == '\n') {
+            strcpy(cmd->params, cmd_str);
+            cmd_idx = 0;
+            memset(cmd_str, 0, MAX_CMD_LENGTH);
+            rasp_execute_command(cmd);
             continue;
         }
         if(raw_str[i] == ':') {
+            strcpy(cmd->cmd, cmd_str);
+            cmd_idx = 0;
+            memset(cmd_str, 0, MAX_CMD_LENGTH);
             continue;
         }
         cmd_str[cmd_idx++] = raw_str[i];
@@ -67,52 +74,16 @@ int rasp_parse_command(const char* raw_str, rasp_command_t* cmd) {
 // 执行命令
 void rasp_execute_command(const rasp_command_t* cmd) {
     if (strcmp(cmd->cmd, "MF") == 0) {
-        handle_motor_forward(&cmd->params);
-        rasp_send_ack("电机直行命令执行成功");
+        // handle_motor_forward(&cmd->params);
     }
     else if (strcmp(cmd->cmd, "MT") == 0) {
-        handle_motor_turn(&cmd->params);
-        rasp_send_ack("电机转向命令执行成功");
+        // handle_motor_turn(&cmd->params);
     }
     else if (strcmp(cmd->cmd, "BEZ") == 0) {
-        handle_buzzer(&cmd->params);
-        rasp_send_ack("蜂鸣器命令执行成功");
-    }
-    else if (strcmp(cmd->cmd, "SPK") == 0) {
-        handle_speaker(&cmd->params);
-        rasp_send_ack("声音命令执行成功");
+        // handle_buzzer(&cmd->params);
     }
     else {
-        rasp_send_error("未知命令");
-    }
-}
-
-// 处理电机直行命令
-void handle_motor_forward(const cmd_params_t* params) {
-    if (params->speed >= 0 && params->speed <= 100) {
-        Motor_Set_Speed(params->speed);
-        char speed_str[16];
-        snprintf(speed_str, sizeof(speed_str), "%d", params->speed);
-        rasp_send_ack_with_data("电机直行命令执行成功", "speed", speed_str);
-    } else {
-        rasp_send_error("速度参数超出范围(0-100)");
-    }
-}
-
-// 处理电机转向命令
-void handle_motor_turn(const cmd_params_t* params) {
-    // 这里需要根据具体的转向逻辑来实现
-    // 暂时使用速度控制
-    if (params->speed >= 0 && params->speed <= 100) {
-        Motor_Set_Speed(params->speed);
-        // TODO: 实现转向逻辑
-        
-        char response_data[64];
-        snprintf(response_data, sizeof(response_data), "电机转向命令执行成功 - 速度:%d, 角度:%d", 
-                params->speed, params->angle);
-        rasp_send_ack(response_data);
-    } else {
-        rasp_send_error("速度参数超出范围(0-100)");
+        // Unknown command
     }
 }
 

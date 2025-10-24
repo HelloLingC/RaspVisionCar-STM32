@@ -30,18 +30,9 @@ typedef struct {
     double timestamp;       // 时间戳
 } rasp_command_t;
 
-// 响应结构体
-typedef struct {
-    char status[8];         // 状态: "ok" 或 "error"
-    char data[64];          // 响应数据
-} rasp_response_t;
-
 // 函数声明
 void rasp_comm_init(void);
 void rasp_comm_process(void);
-void rasp_send_ack(const char* data);
-void rasp_send_ack_with_data(const char* data, const char* key, const char* value);
-void rasp_send_error(const char* error_msg);
 int rasp_parse_command(const char* json_str, rasp_command_t* cmd);
 void rasp_execute_command(const rasp_command_t* cmd);
 
