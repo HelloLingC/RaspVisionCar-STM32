@@ -116,6 +116,7 @@ void Vofa_send_data(int data1, int data2, int data3, int data4, int data5, int d
 
     HAL_UART_Transmit(&huart1, tempData, 28, HAL_MAX_DELAY);
 }
+volatile int16_t current_spd = 0;
 /* USER CODE END 0 */
 
 /**
@@ -192,7 +193,7 @@ int main(void)
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 150;
+  int16_t target_rpm = 100;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
@@ -269,7 +270,7 @@ int main(void)
       snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
       SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_UpdateScreen();
-      
+
       last_status_time = get_tick_ms();
     }
 
@@ -343,13 +344,16 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         encoder_get_motor_speed(&l_rpm, &r_rpm);
 
         float left_output = 0.0f, right_output = 0.0f;
-        PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
-        Motor_Left_Set_Raw_Speed((int16_t)left_output);
-        Motor_Right_Set_Raw_Speed((int16_t)right_output);
-        Vofa_send_data(100, 100, left_output, right_output, 0, 0);
+        // PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
+        // Motor_Left_Set_Raw_Speed((int16_t)left_output);
+        //Motor_Right_Set_Raw_Speed((int16_t)right_output);
+        char message[100]; 
+        snprintf(message, sizeof(message), "<main>:%d,%d,%d,%d,%d,%d\n", s_pid.target_left_rpm, s_pid.target_right_rpm, __HAL_TIM_GET_COUNTER(&htim2), __HAL_TIM_GET_COUNTER(&htim4), get_tick_ms(), 0);
+        HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
+        // Vofa_send_data(s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm, get_tick_ms(), 0);
         break;
-      default:
-        // 其他通道暂不处理
+        default:
+          // 其他通道暂不处理
         break;
     }
   }

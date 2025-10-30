@@ -27,8 +27,8 @@ void init_encoders(void) {
 	encoder_right.last_count = (encoder_right.timer->Instance->CNT);
 	encoder_right.rpm = 0;
 
-	HAL_TIM_Encoder_Start(encoder_timer_left, TIM_CHANNEL_ALL);
-	HAL_TIM_Encoder_Start(encoder_timer_right, TIM_CHANNEL_ALL);
+	HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
+	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 }
 
 #define ENCODER_PPR 13
@@ -42,22 +42,22 @@ static void encoder_update_one(Encoder_t* enc) {
 	int32_t diff = (int32_t)(cnt - enc->last_count);
 
 	if (diff > 32767) {
-        diff -= 65536;  // Negative overflow
+        diff -= 65536;  // Negative overflowd
     } else if (diff < -32768) {
         diff += 65536;  // Positive overflow
     }
 	int32_t pulse_per_second = diff;
 
-	int32_t rpm = pulse_per_second / PULSE_PER_REV * 60;
+	// int32_t rpm = pulse_per_second / PULSE_PER_REV * 60;
 
 	// 平均值滤波
-	for (int i = 0; i < 4; i++) {
-		enc->filter_rpm[i] = enc->filter_rpm[i+1];
-    }
-    enc->filter_rpm[4] = (int16_t)rpm;
+	// for (int i = 0; i < 4; i++) {
+	// 	enc->filter_rpm[i] = enc->filter_rpm[i+1];
+    // }
+    // enc->filter_rpm[4] = (int16_t)rpm;
 
-	int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
-	enc->rpm = filtered_rpm;
+	// int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
+	enc->rpm = (int16_t) cnt;
 	enc->last_count = cnt;
 }
 
