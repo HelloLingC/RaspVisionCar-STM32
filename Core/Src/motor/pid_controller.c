@@ -2,6 +2,8 @@
 #include "motor_left.h"
 #include "motor_right.h"
 #include "main.h"
+#include <string.h>
+#include <stdio.h>
 
 static float clampf(float x, float limit_abs)
 {
@@ -14,6 +16,8 @@ PID_Handle s_pid;
 
 extern TIM_HandleTypeDef htim1;
 
+extern UART_HandleTypeDef huart1;
+
 void  Motor_Left_Set_Raw_Speed(int16_t l_pwm);
 void  Motor_Right_Set_Raw_Speed(int16_t r_pwm);
 
@@ -21,14 +25,14 @@ void pid_init_default(void)
 {
     // 3.3 0.5 0.6
     PID_Params left_p = {
-        .kP = 3.1f,
-        .kI = 0.6f,
+        .kP = 0.03f,
+        .kI = 0.0f,
         .kD = 0.0f,
         .output_limit = 1000.0f,
     };
     PID_Params right_p = {
-        .kP = 3.1f,
-        .kI = 0.6f,
+        .kP = 0.03f,
+        .kI = 0.0f,
         .kD = 0.0f,
         .output_limit = 1000.0f,
     };
@@ -94,48 +98,55 @@ void pid_compute_one(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_left_output = l_pwm;
     s_pid.last_right_output = r_pwm;
 
+    char message[100];
+    snprintf(message, sizeof(message), "<pid>:%d,%d,%d,%d\n", l_err, r_err, (int16_t)l_pwm, (int16_t)r_pwm);
+    HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
+
     Motor_Left_Set_Raw_Speed((int16_t)l_pwm);
     Motor_Right_Set_Raw_Speed((int16_t)r_pwm);
 }
 
-void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output) {
-    // Left motor PID (位置式)
-    float l_error = (float)s_pid.target_left_rpm - (float)left_current;
-    s_pid.left_integral += (int16_t)l_error;
-    float l_derivative = l_error - (float)s_pid.last_left_err;
+// void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output) {
+//     // Left motor PID (位置式)
+//     float l_error = (float)s_pid.target_left_rpm - (float)left_current;
+//     s_pid.left_integral += (int16_t)l_error;
+//     float l_derivative = l_error - (float)s_pid.last_left_err;
 
-    if (s_pid.left_params.kI != 0.0f) {
-        float l_integralMax = 1000.0f / s_pid.left_params.kI;
-        if (s_pid.left_integral > l_integralMax) s_pid.left_integral = (int16_t)l_integralMax;
-        if (s_pid.left_integral < -l_integralMax) s_pid.left_integral = (int16_t)(-l_integralMax);
-    }
+//     if (s_pid.left_params.kI != 0.0f) {
+//         float l_integralMax = 1000.0f / s_pid.left_params.kI;
+//         if (s_pid.left_integral > l_integralMax) s_pid.left_integral = (int16_t)l_integralMax;
+//         if (s_pid.left_integral < -l_integralMax) s_pid.left_integral = (int16_t)(-l_integralMax);
+//     }
 
-    float l_out = s_pid.left_params.kP * l_error +
-                  s_pid.left_params.kI * (float)s_pid.left_integral +
-                  s_pid.left_params.kD * l_derivative;
+//     float l_out = s_pid.left_params.kP * l_error +
+//                   s_pid.left_params.kI * (float)s_pid.left_integral +
+//                   s_pid.left_params.kD * l_derivative;
 
-    s_pid.last_left_err = (int16_t)l_error;
+//     s_pid.last_left_err = (int16_t)l_error;
 
-    // Right motor PID (位置式)
-    float r_error = (float)s_pid.target_right_rpm - (float)right_current;
-    s_pid.right_integral += (int16_t)r_error;
-    float r_derivative = r_error - (float)s_pid.last_right_err;
+//     // Right motor PID (位置式)
+//     float r_error = (float)s_pid.target_right_rpm - (float)right_current;
+//     s_pid.right_integral += (int16_t)r_error;
+//     float r_derivative = r_error - (float)s_pid.last_right_err;
 
-    if (s_pid.right_params.kI != 0.0f) {
-        float r_integralMax = 1000.0f / s_pid.right_params.kI;
-        if (s_pid.right_integral > r_integralMax) s_pid.right_integral = (int16_t)r_integralMax;
-        if (s_pid.right_integral < -r_integralMax) s_pid.right_integral = (int16_t)(-r_integralMax);
-    }
+//     if (s_pid.right_params.kI != 0.0f) {
+//         float r_integralMax = 1000.0f / s_pid.right_params.kI;
+//         if (s_pid.right_integral > r_integralMax) s_pid.right_integral = (int16_t)r_integralMax;
+//         if (s_pid.right_integral < -r_integralMax) s_pid.right_integral = (int16_t)(-r_integralMax);
+//     }
 
-    float r_out = s_pid.right_params.kP * r_error +
-                  s_pid.right_params.kI * (float)s_pid.right_integral +
-                  s_pid.right_params.kD * r_derivative;
+//     float r_out = s_pid.right_params.kP * r_error +
+//                   s_pid.right_params.kI * (float)s_pid.right_integral +
+//                   s_pid.right_params.kD * r_derivative;
 
-    s_pid.last_right_err = (int16_t)r_error;
+//     s_pid.last_right_err = (int16_t)r_error;
 
-    if (left_output) *left_output = l_out;
-    if (right_output) *right_output = r_out;
-}
+//     *left_output = l_out;
+//     *right_output = r_out;
+//     char message[100];
+//     snprintf(message, sizeof(message), "<pid>:%d,%d,%d,%d\n", (int16_t)l_error, (int16_t)r_error, (int16_t)l_out, (int16_t)r_out);
+//     HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
+// }
 
 void pid_update_10ms(int16_t left_meas_rpm, int16_t right_meas_rpm)
 {

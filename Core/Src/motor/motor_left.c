@@ -5,37 +5,19 @@
 
 void Motor_Left_Set_Raw_Speed(int16_t pwm_value) {
   pwm_value = (pwm_value < -1000) ? -1000 : (pwm_value > 1000) ? 1000 : pwm_value;
-  HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_RESET);
-  __HAL_TIM_SET_COMPARE(MOTOR_A_TIMER, TIM_CHANNEL_1, pwm_value);
-}
-
-/**
- * @brief 设置电机速度和方向
- * @param speed: 速度值 (-100 到 100)
- *       负值反转，正值正转，0停止
- */
-void Motor_Left_Set_Speed(int8_t speed) {
-  // 限制速度范围
-  speed = (speed < -100) ? -100 : (speed > 100) ? 100 : speed;
-  
-  // CCRv
-  uint16_t pwm_value = abs(speed) * (htim3.Init.Period + 1) / 100;
-  
-  if (speed > 0) {
+  if(pwm_value > 0) {
     // 正转
     HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_RESET);
-  } else if (speed < 0) {
+  } else if (pwm_value < 0) {
     // 反转
     HAL_GPIO_WritePin(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, GPIO_PIN_SET);
+    pwm_value = -pwm_value;
   } else {
     // 停止
     Motor_Left_ALL_RESET();
   }
-  
-  // 设置PWM值
   __HAL_TIM_SET_COMPARE(MOTOR_A_TIMER, TIM_CHANNEL_1, pwm_value);
 }
 

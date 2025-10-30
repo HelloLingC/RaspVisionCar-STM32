@@ -188,12 +188,12 @@ int main(void)
   HAL_Delay(1200);
 
   // Enable DWT (Data Watchpoint and Trace) unit
-  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-  DWT->CYCCNT = 0;
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  // DWT->CYCCNT = 0;
+  // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 100;
+  int16_t target_rpm = 0;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
@@ -201,7 +201,9 @@ int main(void)
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
 
-  buzzer_on(150);
+  Motor_Left_Set_Raw_Speed(-200);
+
+  // buzzer_on(150);
 
   // usart_log("System Initialized");
 
@@ -345,11 +347,13 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 
         float left_output = 0.0f, right_output = 0.0f;
         // PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
+        pid_update_10ms(l_rpm, r_rpm);
         // Motor_Left_Set_Raw_Speed((int16_t)left_output);
-        //Motor_Right_Set_Raw_Speed((int16_t)right_output);
-        char message[100]; 
-        snprintf(message, sizeof(message), "<main>:%d,%d,%d,%d,%d,%d\n", s_pid.target_left_rpm, s_pid.target_right_rpm, __HAL_TIM_GET_COUNTER(&htim2), __HAL_TIM_GET_COUNTER(&htim4), get_tick_ms(), 0);
-        HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
+        // Motor_Right_Set_Raw_Speed((int16_t)right_output);
+
+        // char message[100];
+        // snprintf(message, sizeof(message), "<main>:%d,%d,%d,%d\n", s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm);
+        // HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
         // Vofa_send_data(s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm, get_tick_ms(), 0);
         break;
         default:
