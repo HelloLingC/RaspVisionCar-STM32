@@ -1,10 +1,10 @@
 #include "motor_right.h"
 #include "motor.h"
-#include "main.h"
+
 #include <stdlib.h>
 
-void Motor_Right_Set_Raw_Speed(uint16_t pwm_value) {
-  pwm_value = (pwm_value < 0) ? 0 : (pwm_value > 1000) ? 1000 : pwm_value;
+void Motor_Right_Set_Raw_Speed(int16_t pwm_value) {
+  pwm_value = (pwm_value < -1000) ? -1000 : (pwm_value > 1000) ? 1000 : pwm_value;
   HAL_GPIO_WritePin(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, GPIO_PIN_SET);
   HAL_GPIO_WritePin(MOTOR_BIN2_PORT, MOTOR_BIN2_PIN, GPIO_PIN_RESET);
   __HAL_TIM_SET_COMPARE(MOTOR_B_TIMER, TIM_CHANNEL_2, pwm_value);

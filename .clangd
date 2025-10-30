@@ -1,0 +1,8 @@
+CompileFlags:
+  Add: 
+    - -mcpu=cortex-m3
+    - -mfloat-abi=soft
+    - -D__FPU_PRESENT=0
+    - --target=arm-none-eabi
+    - -mfpu=none
+    - -I/Applications/ArmGNUToolchain/14.3.rel1/arm-none-eabi/arm-none-eabi/include

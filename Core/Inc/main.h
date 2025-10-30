@@ -31,8 +31,6 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <string.h>
 #include "tim.h"
 /* USER CODE END Includes */
 
@@ -62,7 +60,8 @@ int _write(int file, char *ptr, int len);
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
-
+// 系统控制标志
+extern volatile uint8_t system_stop_flag;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

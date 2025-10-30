@@ -37,8 +37,9 @@
 #include "pid_controller.h"
 #include "buzzer.h"
 
-float PID_Calc(float current);
-void Motor_Left_Set_Raw_Speed(uint16_t pwm_value);
+void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output);
+void Motor_Left_Set_Raw_Speed(int16_t pwm_value);
+void Motor_Right_Set_Raw_Speed(int16_t pwm_value);
 // Add this in your main.h or similar header file
 
 /* USER CODE END Includes */
@@ -61,7 +62,8 @@ void Motor_Left_Set_Raw_Speed(uint16_t pwm_value);
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+// 系统控制标志
+volatile uint8_t system_stop_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -190,7 +192,7 @@ int main(void)
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 280;
+  int16_t target_rpm = 150;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
@@ -207,8 +209,41 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+    // 检查停止标志
+    if (system_stop_flag) {
+      // 停止所有电机
+      Motor_Left_Set_Raw_Speed(0);
+      Motor_Right_Set_Raw_Speed(0);
+      
+      // 停止定时器
+      HAL_TIM_Base_Stop_IT(&htim1);
+      HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
+      HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_4);
+      
+      // 更新OLED显示停止状态
+      SSD1306_Fill(SSD1306_COLOR_BLACK);
+      SSD1306_GotoXY(0, 0);
+      SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 15);
+      SSD1306_Puts("Status: STOPPED", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_GotoXY(0, 30);
+      SSD1306_Puts("System Halted", &Font_7x10, SSD1306_COLOR_WHITE);
+      SSD1306_UpdateScreen();
+      
+      // 进入停止状态循环
+      while (system_stop_flag) {
+        buzzer_update();
+        HAL_Delay(100);
+      }
+      
+      // 如果收到重新启动命令，重新初始化系统
+      HAL_TIM_Base_Start_IT(&htim1);
+      HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
+      HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
+    }
+    
     // 处理树莓派通信buffer
-    //rasp_comm_process();
+    rasp_comm_process();
     buzzer_update();
 
     // Update OLED display
@@ -224,7 +259,7 @@ int main(void)
       SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(35, 30);
       char time_str[12];
-      snprintf(time_str, sizeof(time_str), "%lus", get_tick_ms() / 1000);
+      snprintf(time_str, sizeof(time_str), "%us", (unsigned int)(get_tick_ms() / 1000));
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
       int16_t l_rpm = 0, r_rpm = 0;
@@ -307,10 +342,14 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         int16_t l_rpm = 0, r_rpm = 0;
         encoder_get_motor_speed(&l_rpm, &r_rpm);
 
-        float left_output = PID_Calc(l_rpm);
-        Motor_Left_Set_Raw_Speed((uint16_t)left_output);
-
-        Vofa_send_data(s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm, left_output, 0);
+        float left_output = 0.0f, right_output = 0.0f;
+        PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
+        Motor_Left_Set_Raw_Speed((int16_t)left_output);
+        Motor_Right_Set_Raw_Speed((int16_t)right_output);
+        Vofa_send_data(100, 100, left_output, right_output, 0, 0);
+        break;
+      default:
+        // 其他通道暂不处理
         break;
     }
   }

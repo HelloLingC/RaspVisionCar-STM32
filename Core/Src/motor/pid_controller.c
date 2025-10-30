@@ -14,8 +14,8 @@ PID_Handle s_pid;
 
 extern TIM_HandleTypeDef htim1;
 
-void  Motor_Left_Set_Raw_Speed(uint16_t l_pwm);
-void  Motor_Right_Set_Raw_Speed(uint16_t r_pwm);
+void  Motor_Left_Set_Raw_Speed(int16_t l_pwm);
+void  Motor_Right_Set_Raw_Speed(int16_t r_pwm);
 
 void pid_init_default(void)
 {
@@ -27,9 +27,9 @@ void pid_init_default(void)
         .output_limit = 1000.0f,
     };
     PID_Params right_p = {
-        .kP = 3.0f,
-        .kI = 0.0f,
-        .kD = 0.6f,
+        .kP = 3.1f,
+        .kI = 0.6f,
+        .kD = 0.0f,
         .output_limit = 1000.0f,
     };
     pid_init(&left_p, &right_p);
@@ -94,25 +94,47 @@ void pid_compute_one(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_left_output = l_pwm;
     s_pid.last_right_output = r_pwm;
 
-    Motor_Left_Set_Raw_Speed((uint16_t)l_pwm);
-    Motor_Right_Set_Raw_Speed((uint16_t)r_pwm);
+    Motor_Left_Set_Raw_Speed((int16_t)l_pwm);
+    Motor_Right_Set_Raw_Speed((int16_t)r_pwm);
 }
 
-float PID_Calc(float current) {
-    float error = s_pid.target_left_rpm - current;
-    s_pid.left_integral += error;        // 可加积分限幅防止积累过大
-    float derivative = error - s_pid.last_left_err;
+void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output) {
+    // Left motor PID (位置式)
+    float l_error = (float)s_pid.target_left_rpm - (float)left_current;
+    s_pid.left_integral += (int16_t)l_error;
+    float l_derivative = l_error - (float)s_pid.last_left_err;
 
-    float integralMax = 1000 / s_pid.left_params.kI;
-    if(s_pid.left_integral > integralMax) s_pid.left_integral = integralMax;
-    if(s_pid.left_integral < -integralMax) s_pid.left_integral = -integralMax;
+    if (s_pid.left_params.kI != 0.0f) {
+        float l_integralMax = 1000.0f / s_pid.left_params.kI;
+        if (s_pid.left_integral > l_integralMax) s_pid.left_integral = (int16_t)l_integralMax;
+        if (s_pid.left_integral < -l_integralMax) s_pid.left_integral = (int16_t)(-l_integralMax);
+    }
 
-    float output = s_pid.left_params.kP * error +
-                  s_pid.left_params.kI * s_pid.left_integral +
-                  s_pid.left_params.kD * derivative;
+    float l_out = s_pid.left_params.kP * l_error +
+                  s_pid.left_params.kI * (float)s_pid.left_integral +
+                  s_pid.left_params.kD * l_derivative;
 
-    s_pid.last_left_err = error;
-    return output;
+    s_pid.last_left_err = (int16_t)l_error;
+
+    // Right motor PID (位置式)
+    float r_error = (float)s_pid.target_right_rpm - (float)right_current;
+    s_pid.right_integral += (int16_t)r_error;
+    float r_derivative = r_error - (float)s_pid.last_right_err;
+
+    if (s_pid.right_params.kI != 0.0f) {
+        float r_integralMax = 1000.0f / s_pid.right_params.kI;
+        if (s_pid.right_integral > r_integralMax) s_pid.right_integral = (int16_t)r_integralMax;
+        if (s_pid.right_integral < -r_integralMax) s_pid.right_integral = (int16_t)(-r_integralMax);
+    }
+
+    float r_out = s_pid.right_params.kP * r_error +
+                  s_pid.right_params.kI * (float)s_pid.right_integral +
+                  s_pid.right_params.kD * r_derivative;
+
+    s_pid.last_right_err = (int16_t)r_error;
+
+    if (left_output) *left_output = l_out;
+    if (right_output) *right_output = r_out;
 }
 
 void pid_update_10ms(int16_t left_meas_rpm, int16_t right_meas_rpm)

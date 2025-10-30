@@ -1,5 +1,7 @@
 #include "rasp_comm.h"
-#include "motor.h"
+#include "main.h"
+#include "motor_left.h"
+#include "motor_right.h"
 // #include "cJSON.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -73,8 +75,15 @@ int rasp_parse_command(const char* raw_str, rasp_command_t* cmd) {
 
 // 执行命令
 void rasp_execute_command(const rasp_command_t* cmd) {
-    if (strcmp(cmd->cmd, "MF") == 0) {
-        // handle_motor_forward(&cmd->params);
+    if (strcmp(cmd->cmd, "STOP") == 0) {
+        // 设置停止标志
+        extern volatile uint8_t system_stop_flag;
+        system_stop_flag = 1;
+    }
+    else if (strcmp(cmd->cmd, "START") == 0) {
+        // 清除停止标志
+        extern volatile uint8_t system_stop_flag;
+        system_stop_flag = 0;
     }
     else if (strcmp(cmd->cmd, "MT") == 0) {
         // handle_motor_turn(&cmd->params);
@@ -190,7 +199,7 @@ void usart_info(const char *format, ...)
     
     if (len > 0 && len < sizeof(buffer)) {
         char info_message[300];
-        snprintf(info_message, sizeof(info_message), "[%lu] INFO: %s\r\n", HAL_GetTick(), buffer);
+        snprintf(info_message, sizeof(info_message), "[%u] INFO: %s\r\n", (unsigned int)HAL_GetTick(), buffer);
         HAL_UART_Transmit(&huart1, (uint8_t*)info_message, strlen(info_message), HAL_MAX_DELAY);
     }
 }
