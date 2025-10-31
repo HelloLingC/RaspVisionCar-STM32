@@ -8,10 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// 通信协议配置
-#define MAX_CMD_LENGTH 256
-#define MAX_RESPONSE_LENGTH 128
-
 #define LOG_PREFIX "RASP_COMM:"
 
 // 命令类型枚举
@@ -32,9 +28,7 @@ typedef struct {
 
 // 函数声明
 void rasp_comm_init(void);
-void rasp_comm_process(void);
-int rasp_parse_command(const char* json_str, rasp_command_t* cmd);
-void rasp_execute_command(const rasp_command_t* cmd);
+int rasp_parse_command(const char* raw_str);
 
 // 命令处理函数
 void handle_motor_forward(const char* params);

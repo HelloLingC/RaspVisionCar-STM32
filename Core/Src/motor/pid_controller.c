@@ -25,14 +25,14 @@ void pid_init_default(void)
 {
     // 3.3 0.5 0.6
     PID_Params left_p = {
-        .kP = 0.03f,
-        .kI = 0.0f,
+        .kP = 0.2f,
+        .kI = 0.1f,
         .kD = 0.0f,
         .output_limit = 1000.0f,
     };
     PID_Params right_p = {
-        .kP = 0.03f,
-        .kI = 0.0f,
+        .kP = 0.2f,
+        .kI = 0.115f,
         .kD = 0.0f,
         .output_limit = 1000.0f,
     };
@@ -99,7 +99,7 @@ void pid_compute_one(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_right_output = r_pwm;
 
     char message[100];
-    snprintf(message, sizeof(message), "<pid>:%d,%d,%d,%d\n", l_err, r_err, (int16_t)l_pwm, (int16_t)r_pwm);
+    snprintf(message, sizeof(message), "<pid%u>:%d,%d,%d,%d,%d\n", HAL_GetTick(), s_pid.target_left_rpm, left_meas_rpm, (int16_t)l_pwm, right_meas_rpm, (int16_t)r_pwm);
     HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
 
     Motor_Left_Set_Raw_Speed((int16_t)l_pwm);

@@ -63,7 +63,7 @@ void Motor_Right_Set_Raw_Speed(int16_t pwm_value);
 
 /* USER CODE BEGIN PV */
 // 系统控制标志
-volatile uint8_t system_stop_flag = 0;
+volatile uint8_t system_stop_flag = 1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -193,19 +193,13 @@ int main(void)
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 0;
+  int16_t target_rpm = 0 * 1456 / 60;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
   // 启动比较中断
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
-
-  Motor_Left_Set_Raw_Speed(-200);
-
-  // buzzer_on(150);
-
-  // usart_log("System Initialized");
 
   /* USER CODE END 2 */
 
@@ -214,6 +208,9 @@ int main(void)
   while (1) {
     // 检查停止标志
     if (system_stop_flag) {
+      usart_info("System Stopped");
+      buzzer_on(150);
+
       // 停止所有电机
       Motor_Left_Set_Raw_Speed(0);
       Motor_Right_Set_Raw_Speed(0);
@@ -240,17 +237,16 @@ int main(void)
       }
       
       // 如果收到重新启动命令，重新初始化系统
+      buzzer_on(150);
       HAL_TIM_Base_Start_IT(&htim1);
       HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
       HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
     }
-    
-    // 处理树莓派通信buffer
-    rasp_comm_process();
+
     buzzer_update();
 
     // Update OLED display
-    uint32_t current_time = get_tick_ms();
+    uint32_t current_time = HAL_GetTick();
     static uint32_t last_status_time = 0;
     if (current_time - last_status_time > 1000) {
       SSD1306_Fill(SSD1306_COLOR_BLACK);
@@ -259,10 +255,12 @@ int main(void)
       SSD1306_GotoXY(0, 15);
       SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(0, 30);
+
+      
       SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(35, 30);
       char time_str[12];
-      snprintf(time_str, sizeof(time_str), "%us", (unsigned int)(get_tick_ms() / 1000));
+      snprintf(time_str, sizeof(time_str), "%us", (unsigned int)(HAL_GetTick() / 1000));
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
       int16_t l_rpm = 0, r_rpm = 0;
@@ -273,7 +271,7 @@ int main(void)
       SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_UpdateScreen();
 
-      last_status_time = get_tick_ms();
+      last_status_time = HAL_GetTick();
     }
 
     /* USER CODE END WHILE */
@@ -348,8 +346,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         float left_output = 0.0f, right_output = 0.0f;
         // PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
         pid_update_10ms(l_rpm, r_rpm);
-        // Motor_Left_Set_Raw_Speed((int16_t)left_output);
-        // Motor_Right_Set_Raw_Speed((int16_t)right_output);
 
         // char message[100];
         // snprintf(message, sizeof(message), "<main>:%d,%d,%d,%d\n", s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm);
@@ -374,6 +370,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  usart_error("Error: %s", __FUNCTION__);
   while (1) {
   }
   /* USER CODE END Error_Handler_Debug */

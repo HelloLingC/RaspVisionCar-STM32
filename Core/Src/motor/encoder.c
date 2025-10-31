@@ -47,16 +47,16 @@ static void encoder_update_one(Encoder_t* enc) {
         diff += 65536;  // Positive overflow
     }
 
-	int32_t rpm = diff * 4 * 13 / 28;
+	// int32_t rpm = (int32_t)(diff * 60.0 / 52.0 / 28.0 + 0.5);
 
 	// 平均值滤波
-	for (int i = 0; i < 4; i++) {
-		enc->filter_rpm[i] = enc->filter_rpm[i+1];
-    }
-    enc->filter_rpm[4] = (int16_t)rpm;
+	// for (int i = 0; i < 4; i++) {
+	// 	enc->filter_rpm[i] = enc->filter_rpm[i+1];
+    // }
+    // enc->filter_rpm[4] = (int16_t)rpm;
 
-	int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
-	enc->rpm = (int16_t) rpm;
+	// int16_t filtered_rpm = (enc->filter_rpm[0] + enc->filter_rpm[1] + enc->filter_rpm[2] + enc->filter_rpm[3] + enc->filter_rpm[4]) / 5;
+	enc->rpm = (int16_t) diff;
 	enc->last_count = cnt;
 }
 

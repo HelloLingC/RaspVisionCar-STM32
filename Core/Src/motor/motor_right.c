@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 void Motor_Right_Set_Raw_Speed(int16_t pwm_value) {
-  pwm_value = (pwm_value < -1000) ? -1000 : (pwm_value > 1000) ? 1000 : pwm_value;
+  pwm_value = (pwm_value < -3600) ? -3600 : (pwm_value > 3600) ? 3600 : pwm_value;
   if(pwm_value > 0) {
     // 正转
     HAL_GPIO_WritePin(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, GPIO_PIN_SET);
