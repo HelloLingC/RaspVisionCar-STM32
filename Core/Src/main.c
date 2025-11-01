@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
+#include "stm32f1xx_hal.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -32,7 +33,6 @@
 #include "justfloat.h"
 #include "ssd1306.h"
 #include "feedforward_controller.h"
-#include "delay.h"
 #include "encoder.h"
 #include "pid_controller.h"
 #include "buzzer.h"
@@ -40,6 +40,8 @@
 void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output);
 void Motor_Left_Set_Raw_Speed(int16_t pwm_value);
 void Motor_Right_Set_Raw_Speed(int16_t pwm_value);
+
+volatile int sTurnAngle = 0;
 // Add this in your main.h or similar header file
 
 /* USER CODE END Includes */
@@ -75,13 +77,6 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-// SystemCoreClock 72000000
-#define SYSTICK_RELOAD_VAL (72000000 / 1000) - 1
-uint32_t get_systick_value(void)
-{
-    return SysTick->VAL;  // 直接读取 STK_VAL 寄存器
-}
-
 uint32_t get_tick_ms(void)
 {
     // Get CPU cycles and convert to milliseconds
@@ -89,34 +84,6 @@ uint32_t get_tick_ms(void)
     return cycles / (SystemCoreClock / 1000);
 }
 
-/*-------------------------------------------------------------------------------------------------------------------
-  @brief     利用Vofa发数据
-  @param     data1，data2，data3，data4，data5，data6，要发的数据放进入参即可
-  @return    null
-  Sample     Vofa_data(Err,Steer_Angle,set_speed_right,right_wheel,set_speed_left,left_wheel);
-  @note      如果不够用，继续往后加入参即可，继续加参数参考原则见下注释
--------------------------------------------------------------------------------------------------------------------*/
-void Vofa_send_data(int data1, int data2, int data3, int data4, int data5, int data6) {
-    float tempFloat[6];
-    uint8_t tempData[28];
-
-    tempFloat[0] = (float)data1;
-    tempFloat[1] = (float)data2;
-    tempFloat[2] = (float)data3;
-    tempFloat[3] = (float)data4;
-    tempFloat[4] = (float)data5;
-    tempFloat[5] = (float)data6;
-
-    memcpy(tempData, (uint8_t *)tempFloat, sizeof(tempFloat));
-
-    tempData[24] = 0x00;
-    tempData[25] = 0x00;
-    tempData[26] = 0x80;
-    tempData[27] = 0x7f;
-
-    HAL_UART_Transmit(&huart1, tempData, 28, HAL_MAX_DELAY);
-}
-volatile int16_t current_spd = 0;
 /* USER CODE END 0 */
 
 /**
@@ -182,7 +149,7 @@ int main(void)
     SSD1306_Puts("System Ready", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_UpdateScreen();
   } else {
-    usart_log("SSD1306 Screen Initialization Failed");
+    usart_error("SSD1306 Screen Initialization Failed");
   }
 
   HAL_Delay(1200);
@@ -193,7 +160,7 @@ int main(void)
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 0 * 1456 / 60;
+  int16_t target_rpm = 100;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
@@ -209,7 +176,6 @@ int main(void)
     // 检查停止标志
     if (system_stop_flag) {
       usart_info("System Stopped");
-      buzzer_on(150);
 
       // 停止所有电机
       Motor_Left_Set_Raw_Speed(0);
@@ -231,19 +197,25 @@ int main(void)
       SSD1306_UpdateScreen();
       
       // 进入停止状态循环
+      buzzer_on(100);
+      int beep_count = 0;
       while (system_stop_flag) {
         buzzer_update();
-        HAL_Delay(100);
+        HAL_Delay(30);
+        // if (beep_count == 0) {
+        //   buzzer_on(80);
+        //   HAL_Delay(80);
+        //   buzzer_off();
+        //   beep_count++;
+        // }
       }
       
       // 如果收到重新启动命令，重新初始化系统
-      buzzer_on(150);
+      buzzer_on(100);
       HAL_TIM_Base_Start_IT(&htim1);
       HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
       HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
     }
-
-    buzzer_update();
 
     // Update OLED display
     uint32_t current_time = HAL_GetTick();
@@ -342,15 +314,18 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         encoder_update_10ms();
         int16_t l_rpm = 0, r_rpm = 0;
         encoder_get_motor_speed(&l_rpm, &r_rpm);
-
-        float left_output = 0.0f, right_output = 0.0f;
         // PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
-        pid_update_10ms(l_rpm, r_rpm);
+        pid_update(l_rpm, r_rpm);
 
         // char message[100];
-        // snprintf(message, sizeof(message), "<main>:%d,%d,%d,%d\n", s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm);
+        // snprintf(message, sizeof(message), "<main%u>:%d,%d.%d\n", HAL_GetTick(), l_rpm, r_rpm, sTurnAngle);
         // HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
-        // Vofa_send_data(s_pid.target_left_rpm, s_pid.target_right_rpm, l_rpm, r_rpm, get_tick_ms(), 0);
+        
+        buzzer_update();
+        // 重新设置下一个20ms触发点（200计数 = 20ms）
+        uint32_t current_count = __HAL_TIM_GET_COUNTER(&htim1);
+        uint32_t next_compare = (current_count + 200) % 10000;
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, next_compare);
         break;
         default:
           // 其他通道暂不处理

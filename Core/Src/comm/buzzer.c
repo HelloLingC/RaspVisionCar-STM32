@@ -55,6 +55,7 @@ void buzzer_on(uint16_t duration_ms) {
 void buzzer_off(void) {
     HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET);
     buzzer_active = 0;
+    when_buzzer_should_end = 0;
 }
 
 void buzzer_update(void) {
