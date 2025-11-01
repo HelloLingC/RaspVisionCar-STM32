@@ -6,7 +6,7 @@
 #define RASPVISIONCAR_COMMON_H
 #include "semphr.h"
 
-#define RX_BUFFER_SIZE 128
+#define RX_BUFFER_SIZE 16
 extern uint8_t rxBuffer[RX_BUFFER_SIZE];
 extern SemaphoreHandle_t xSerialSemaphore;
 

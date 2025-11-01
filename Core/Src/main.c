@@ -155,6 +155,7 @@ int main(void)
   pid_init_default();
   int16_t target_rpm = 0;
   pid_set_target_rpm(target_rpm, target_rpm);
+  xSerialSemaphore = xSemaphoreCreateBinary();
 
   /* USER CODE END 2 */
 

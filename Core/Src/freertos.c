@@ -108,7 +108,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* creation of receiveTask */
-  // receiveTaskHandle = osThreadNew(StartTaskReceive, NULL, &receiveTask_attributes);
+  receiveTaskHandle = osThreadNew(StartTaskReceive, NULL, &receiveTask_attributes);
 
   /* creation of oledTask */
   oledTaskHandle = osThreadNew(StartTaskOLED, NULL, &oledTask_attributes);
