@@ -135,7 +135,7 @@ int main(void)
     // 显示欢迎信息
     SSD1306_Fill(SSD1306_COLOR_BLACK);
     SSD1306_GotoXY(0, 0);
-    SSD1306_Puts("Rasp Vision Car", &Font_7x10, SSD1306_COLOR_WHITE);
+    SSD1306_Puts("Rasp Vision Car2", &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 20);
     SSD1306_Puts(__DATE__, &Font_7x10, SSD1306_COLOR_WHITE);
     SSD1306_GotoXY(0, 30);
@@ -147,23 +147,26 @@ int main(void)
     usart_error("SSD1306 Screen Initialization Failed");
   }
 
-  HAL_Delay(1200);
-
   // Enable DWT (Data Watchpoint and Trace) unit
   // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // DWT->CYCCNT = 0;
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 100;
+  int16_t target_rpm = 0;
   pid_set_target_rpm(target_rpm, target_rpm);
-
-  xSerialSemaphore = xSemaphoreCreateBinary();
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  
+  /* Create semaphores after FreeRTOS kernel is initialized */
+  xSerialSemaphore = xSemaphoreCreateBinary();
+  if (xSerialSemaphore == NULL) {
+    usart_error("Cannot Create Serial Semaphore");
+  }
+  
   MX_FREERTOS_Init();
 
   /* Start scheduler */

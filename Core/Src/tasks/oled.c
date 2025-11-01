@@ -22,7 +22,7 @@ void OLED_task_update(void) {
   SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
   int16_t l_rpm = 0, r_rpm = 0;
-  encoder_get_motor_speed(&l_rpm, &r_rpm);
+  // encoder_get_motor_speed(&l_rpm, &r_rpm);
   SSD1306_GotoXY(0, 45);
   char speed_str[18];
   snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
