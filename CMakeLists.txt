@@ -31,10 +31,18 @@ message("Build type: " ${CMAKE_BUILD_TYPE})
 # Enable CMake support for ASM and C languages
 enable_language(C ASM)
 
+file(GLOB CORE_SRC
+        "Core/Src/comm/*.c"
+        "Core/Src/motor/*.c"
+        "Core/Src/tasks/*.c"
+)
+
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
-        Core/Src/tasks/oled.c
-        Core/Src/tasks/rasp_comm.c)
+        ${CORE_SRC}
+        Core/Src
+        Core/Src/fonts.c
+        Core/Src/ssd1306.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
