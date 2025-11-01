@@ -92,8 +92,8 @@ void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_right_err = r_err;
 
     char message[100];
-    snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
-    HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
+    // snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
+    // HAL_UART_Transmit(&huart1, message, strlen(message), 10);
 
     extern volatile int sTurnAngle;
     // if(sTurnAngle != 0) {

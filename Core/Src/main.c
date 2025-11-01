@@ -160,13 +160,6 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  
-  /* Create semaphores after FreeRTOS kernel is initialized */
-  xSerialSemaphore = xSemaphoreCreateBinary();
-  if (xSerialSemaphore == NULL) {
-    usart_error("Cannot Create Serial Semaphore");
-  }
-  
   MX_FREERTOS_Init();
 
   /* Start scheduler */

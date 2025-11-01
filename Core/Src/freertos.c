@@ -51,7 +51,7 @@
 osThreadId_t receiveTaskHandle;
 const osThreadAttr_t receiveTask_attributes = {
   .name = "receiveTask",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for oledTask */
@@ -65,7 +65,7 @@ const osThreadAttr_t oledTask_attributes = {
 osThreadId_t pidTaskHandle;
 const osThreadAttr_t pidTask_attributes = {
   .name = "pidTask",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 
@@ -108,7 +108,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* creation of receiveTask */
-  receiveTaskHandle = osThreadNew(StartTaskReceive, NULL, &receiveTask_attributes);
+  // receiveTaskHandle = osThreadNew(StartTaskReceive, NULL, &receiveTask_attributes);
 
   /* creation of oledTask */
   oledTaskHandle = osThreadNew(StartTaskOLED, NULL, &oledTask_attributes);
@@ -141,12 +141,13 @@ void StartTaskReceive(void *argument)
   {
     if (xSerialSemaphore != NULL) {
       if (xSemaphoreTake(xSerialSemaphore, portMAX_DELAY) == pdTRUE) {
-        // usart_info((const char*)rxBuffer);
+        usart_info((const char*)rxBuffer);
       }
     } else {
       // We could not obtain the semaphore
-      usart_error("FAILED to obtain samaphore in TaskReceive.");
+      // usart_error("FAILED to obtain samaphore in TaskReceive.");
     }
+    osDelay(100);
   }
   /* USER CODE END StartTaskReceive */
 }
