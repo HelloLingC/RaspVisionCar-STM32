@@ -135,25 +135,6 @@ int main(void)
   // 初始化树莓派通信协议
   rasp_comm_init();
 
-  // 初始化SSD1306显示屏
-  if (SSD1306_Init() == 0) {
-    // 显示欢迎信息
-    SSD1306_Fill(SSD1306_COLOR_BLACK);
-    SSD1306_GotoXY(0, 0);
-    SSD1306_Puts("Rasp Vision Car", &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_GotoXY(0, 20);
-    SSD1306_Puts(__DATE__, &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_GotoXY(0, 30);
-    SSD1306_Puts(__TIME__, &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_GotoXY(0, 40);
-    SSD1306_Puts("System Ready", &Font_7x10, SSD1306_COLOR_WHITE);
-    SSD1306_UpdateScreen();
-  } else {
-    usart_error("SSD1306 Screen Initialization Failed");
-  }
-
-  HAL_Delay(1200);
-
   // Enable DWT (Data Watchpoint and Trace) unit
   // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // DWT->CYCCNT = 0;
@@ -216,6 +197,7 @@ int main(void)
       HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
       HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
     }
+    buzzer_update();
 
     // Update OLED display
     uint32_t current_time = HAL_GetTick();
@@ -321,7 +303,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         // snprintf(message, sizeof(message), "<main%u>:%d,%d.%d\n", HAL_GetTick(), l_rpm, r_rpm, sTurnAngle);
         // HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
         
-        buzzer_update();
         // 重新设置下一个20ms触发点（200计数 = 20ms）
         uint32_t current_count = __HAL_TIM_GET_COUNTER(&htim1);
         uint32_t next_compare = (current_count + 200) % 10000;
