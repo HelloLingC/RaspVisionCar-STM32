@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "common.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,10 +47,10 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for receiveTask */
+osThreadId_t receiveTaskHandle;
+const osThreadAttr_t receiveTask_attributes = {
+  .name = "receiveTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -74,7 +74,7 @@ const osThreadAttr_t pidTask_attributes = {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
+void StartTaskReceive(void *argument);
 void StartTaskOLED(void *argument);
 void StartTaskPID(void *argument);
 
@@ -107,8 +107,8 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of receiveTask */
+  receiveTaskHandle = osThreadNew(StartTaskReceive, NULL, &receiveTask_attributes);
 
   /* creation of oledTask */
   oledTaskHandle = osThreadNew(StartTaskOLED, NULL, &oledTask_attributes);
@@ -126,26 +126,33 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
-extern void OLED_task_update(void);
+/* USER CODE BEGIN Header_StartTaskReceive */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the receiveTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartTaskReceive */
+void StartTaskReceive(void *argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
+  /* USER CODE BEGIN StartTaskReceive */
   /* Infinite loop */
   for(;;)
   {
-
+    if (xSerialSemaphore != NULL) {
+      if (xSemaphoreTake(xSerialSemaphore, portMAX_DELAY) == pdTRUE) {
+        // usart_info((const char*)rxBuffer);
+      }
+    } else {
+      // We could not obtain the semaphore
+      usart_error("FAILED to obtain samaphore in TaskReceive.");
+    }
   }
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE END StartTaskReceive */
 }
 
 /* USER CODE BEGIN Header_StartTaskOLED */
+extern void OLED_task_update();
 /**
 * @brief Function implementing the oledTask thread.
 * @param argument: Not used
@@ -165,6 +172,7 @@ void StartTaskOLED(void *argument)
 }
 
 /* USER CODE BEGIN Header_StartTaskPID */
+extern void task_pid_update();
 /**
 * @brief Function implementing the pidTask thread.
 * @param argument: Not used
@@ -177,7 +185,8 @@ void StartTaskPID(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    task_pid_update();
+    osDelay(20);
   }
   /* USER CODE END StartTaskPID */
 }

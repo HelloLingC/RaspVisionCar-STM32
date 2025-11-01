@@ -15,10 +15,4 @@ typedef struct {
 void rasp_comm_init(void);
 int rasp_parse_command(const char* raw_str);
 
-// USART printf
-void usart_log(const char *format, ...);
-void usart_debug(const char *format, ...);
-void usart_error(const char *format, ...);
-void usart_info(const char *format, ...);
-
 #endif /* __RASP_COMM_H__ */

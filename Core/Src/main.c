@@ -26,16 +26,17 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "buzzer.h"
+#include "encoder.h"
+#include "feedforward_controller.h"
+#include "justfloat.h"
 #include "motor.h"
 #include "motor_left.h"
 #include "motor_right.h"
-#include "rasp_comm.h"
-#include "justfloat.h"
-#include "ssd1306.h"
-#include "feedforward_controller.h"
-#include "encoder.h"
 #include "pid_controller.h"
-#include "buzzer.h"
+#include "rasp_comm.h"
+#include "ssd1306.h"
+#include "common.h"
 
 void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output);
 void Motor_Left_Set_Raw_Speed(int16_t pwm_value);
@@ -64,8 +65,9 @@ volatile int sTurnAngle = 0;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// 系统控制标志
 volatile uint8_t system_stop_flag = 1;
+uint8_t rxBuffer[RX_BUFFER_SIZE];
+SemaphoreHandle_t xSerialSemaphore;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -156,6 +158,8 @@ int main(void)
   int16_t target_rpm = 100;
   pid_set_target_rpm(target_rpm, target_rpm);
 
+  xSerialSemaphore = xSemaphoreCreateBinary();
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -190,16 +194,9 @@ int main(void)
       
       // 进入停止状态循环
       buzzer_on(100);
-      int beep_count = 0;
       while (system_stop_flag) {
         buzzer_update();
         HAL_Delay(30);
-        // if (beep_count == 0) {
-        //   buzzer_on(80);
-        //   HAL_Delay(80);
-        //   buzzer_off();
-        //   beep_count++;
-        // }
       }
       
       // 如果收到重新启动命令，重新初始化系统
@@ -253,35 +250,16 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  if (huart->Instance == USART1) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  if(htim->Instance == TIM1)
-  {
-    switch(htim->Channel)
-    {
-      case HAL_TIM_ACTIVE_CHANNEL_1:
-        // 10ms任务
+    // start next DMA receiving
+    HAL_UART_Receive_DMA(huart, rxBuffer, RX_BUFFER_SIZE);
 
-        break;
-      case HAL_TIM_ACTIVE_CHANNEL_4:
-        // 20ms任务
-        encoder_update_10ms();
-        int16_t l_rpm = 0, r_rpm = 0;
-        encoder_get_motor_speed(&l_rpm, &r_rpm);
-        // PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
-        pid_update(l_rpm, r_rpm);
+    xSemaphoreGiveFromISR(xSerialSemaphore, &xHigherPriorityTaskWoken);
 
-        // char message[100];
-        // snprintf(message, sizeof(message), "<main%u>:%d,%d.%d\n", HAL_GetTick(), l_rpm, r_rpm, sTurnAngle);
-        // HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
-        
-        buzzer_update();
-        break;
-        default:
-          // 其他通道暂不处理
-        break;
-    }
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
 }
 

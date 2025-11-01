@@ -1,3 +1,5 @@
+#pragma once
+#include <stdint.h>
 
 void init_encoders(void);
 void encoder_update_10ms(void);

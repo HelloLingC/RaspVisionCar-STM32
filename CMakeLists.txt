@@ -42,7 +42,9 @@ add_executable(${CMAKE_PROJECT_NAME}
         ${CORE_SRC}
         Core/Src
         Core/Src/fonts.c
-        Core/Src/ssd1306.c)
+        Core/Src/ssd1306.c
+        Core/Src/tasks/pid.c
+        Core/Inc/common.h)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

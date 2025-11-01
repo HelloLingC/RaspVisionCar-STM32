@@ -63,21 +63,21 @@ int rasp_parse_command(const char* raw_str) {
 }
 
 // UART接收完成 1byte 回调函数
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == USART1) {
-        if (rx_index < RX_BUF_SIZE - 1) {
-            rx_buffer[rx_index++] = rx_byte;
-        }
-
-        if (rx_byte == '\n' || rx_byte == '\r') {
-            rx_buffer[rx_index-1] = '\0';
-            rasp_parse_command((char*)rx_buffer);
-            rx_index = 0;
-        }
-
-        HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
-    }
-}
+// void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+//     if (huart->Instance == USART1) {
+//         if (rx_index < RX_BUF_SIZE - 1) {
+//             rx_buffer[rx_index++] = rx_byte;
+//         }
+//
+//         if (rx_byte == '\n' || rx_byte == '\r') {
+//             rx_buffer[rx_index-1] = '\0';
+//             rasp_parse_command((char*)rx_buffer);
+//             rx_index = 0;
+//         }
+//
+//         HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+//     }
+// }
 
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index) {
     Rasp_Command_t cmd_t = {0};
