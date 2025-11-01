@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "i2c.h"
-#include "stm32f1xx_hal.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -70,19 +70,13 @@ volatile uint8_t system_stop_flag = 1;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-uint32_t get_tick_ms(void)
-{
-    // Get CPU cycles and convert to milliseconds
-    uint32_t cycles = DWT->CYCCNT;
-    return cycles / (SystemCoreClock / 1000);
-}
 
 /* USER CODE END 0 */
 
@@ -121,7 +115,6 @@ int main(void)
   MX_TIM4_Init();
   MX_I2C1_Init();
   MX_USART2_UART_Init();
-  MX_TIM1_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
@@ -163,12 +156,16 @@ int main(void)
   int16_t target_rpm = 100;
   pid_set_target_rpm(target_rpm, target_rpm);
 
-  HAL_TIM_Base_Start_IT(&htim1);
-  // 启动比较中断
-  HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
-
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -180,12 +177,7 @@ int main(void)
       // 停止所有电机
       Motor_Left_Set_Raw_Speed(0);
       Motor_Right_Set_Raw_Speed(0);
-      
-      // 停止定时器
-      HAL_TIM_Base_Stop_IT(&htim1);
-      HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
-      HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_4);
-      
+
       // 更新OLED显示停止状态
       SSD1306_Fill(SSD1306_COLOR_BLACK);
       SSD1306_GotoXY(0, 0);
@@ -212,38 +204,6 @@ int main(void)
       
       // 如果收到重新启动命令，重新初始化系统
       buzzer_on(100);
-      HAL_TIM_Base_Start_IT(&htim1);
-      HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
-      HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
-    }
-
-    // Update OLED display
-    uint32_t current_time = HAL_GetTick();
-    static uint32_t last_status_time = 0;
-    if (current_time - last_status_time > 1000) {
-      SSD1306_Fill(SSD1306_COLOR_BLACK);
-      SSD1306_GotoXY(0, 0);
-      SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 15);
-      SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 30);
-
-      
-      SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(35, 30);
-      char time_str[12];
-      snprintf(time_str, sizeof(time_str), "%us", (unsigned int)(HAL_GetTick() / 1000));
-      SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
-
-      int16_t l_rpm = 0, r_rpm = 0;
-      encoder_get_motor_speed(&l_rpm, &r_rpm);
-      SSD1306_GotoXY(0, 45);
-      char speed_str[18];
-      snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
-      SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_UpdateScreen();
-
-      last_status_time = HAL_GetTick();
     }
 
     /* USER CODE END WHILE */
@@ -294,11 +254,6 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    if(htim->Instance == TIM1) { // TIM1: 1000ms Interrupt
-    }
-}
-
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if(htim->Instance == TIM1)
@@ -322,10 +277,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         // HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
         
         buzzer_update();
-        // 重新设置下一个20ms触发点（200计数 = 20ms）
-        uint32_t current_count = __HAL_TIM_GET_COUNTER(&htim1);
-        uint32_t next_compare = (current_count + 200) % 10000;
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, next_compare);
         break;
         default:
           // 其他通道暂不处理
@@ -335,6 +286,28 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
