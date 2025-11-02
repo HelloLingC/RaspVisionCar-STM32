@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
 #include "i2c.h"
-#include "stm32f1xx_hal.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -115,6 +115,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM3_Init();
   MX_TIM2_Init();
@@ -125,14 +126,10 @@ int main(void)
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
-  // 编码器初始化
+  SSD1306_Init();
   init_encoders();
-
   Motor_Init();
-
   //ff_init_default();
-
-  // 初始化树莓派通信协议
   rasp_comm_init();
 
   // Enable DWT (Data Watchpoint and Trace) unit
@@ -141,13 +138,16 @@ int main(void)
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 100;
+  int16_t target_rpm = 0;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
   // 启动比较中断
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
+
+  usart_info("Rasp Vision Car v1");
+  usart_info("Everything is good and ready to go");
 
   /* USER CODE END 2 */
 
@@ -156,8 +156,7 @@ int main(void)
   while (1) {
     // 检查停止标志
     if (system_stop_flag) {
-      usart_info("System Stopped");
-
+      
       // 停止所有电机
       Motor_Left_Set_Raw_Speed(0);
       Motor_Right_Set_Raw_Speed(0);
@@ -175,14 +174,17 @@ int main(void)
       SSD1306_Puts("Status: STOPPED", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(0, 30);
       SSD1306_Puts("System Halted", &Font_7x10, SSD1306_COLOR_WHITE);
+
       SSD1306_UpdateScreen();
+
+      usart_info("System Stopped");
       
       // 进入停止状态循环
       buzzer_on(100);
       int beep_count = 0;
       while (system_stop_flag) {
         buzzer_update();
-        HAL_Delay(30);
+        // HAL_Delay(30);
         // if (beep_count == 0) {
         //   buzzer_on(80);
         //   HAL_Delay(80);

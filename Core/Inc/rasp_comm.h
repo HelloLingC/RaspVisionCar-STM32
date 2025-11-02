@@ -13,7 +13,6 @@ typedef struct {
 } Rasp_Command_t;
 
 void rasp_comm_init(void);
-int rasp_parse_command(const char* raw_str);
 
 // USART printf
 void usart_log(const char *format, ...);

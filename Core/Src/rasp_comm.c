@@ -3,22 +3,33 @@
 #include "motor_left.h"
 #include "motor_right.h"
 // #include "cJSON.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include "buzzer.h"
+#include "stm32f1xx_hal_def.h"
+#include "stm32f1xx_hal_dma.h"
+#include "stm32f1xx_hal_uart.h"
+#include "usart.h"
 
-#define RX_BUF_SIZE 16
+#define RX_BUF_SIZE 64
 
 uint8_t rx_buffer[RX_BUF_SIZE];
-uint8_t rx_byte;
 uint8_t rx_index = 0;
 
-// 初始化通信协议
+extern DMA_HandleTypeDef hdma_usart1_rx;
 void rasp_comm_init(void) {
     memset(rx_buffer, 0, RX_BUF_SIZE);
 
-    // 启动UART接收中断
-    HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+    // Start UART receive interrupt
+    HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUF_SIZE);
+    if(status != HAL_OK) {
+        usart_error("HAL_UART_Receive_DMA failed");
+        Error_Handler();
+    }
+    __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+    // HAL_UART_Receive_IT(&huart1, rx_buffer, 6);
 }
 
 const char* starts_with(const char *str, const char *prefix) {
@@ -34,10 +45,22 @@ const char* starts_with(const char *str, const char *prefix) {
 extern volatile int sTurnAngle;
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index);
 // I was planning to use cJSON at the beginning, but it's too heavy for this project
-int rasp_parse_command(const char* raw_str) {
+int rasp_parse_commands() {
+    const char* raw_str = (const char*) rx_buffer;
+    // usart_info("Received: %s", raw_str);
+
+    if (strcmp(raw_str, "start\n") == 0) {
+        system_stop_flag = 0;
+    } else if (strcmp(raw_str, "stop\n") == 0) {
+        system_stop_flag = 1;
+    } else if (strcmp(raw_str, "beep\n") == 0) {
+        buzzer_on(100);
+    }
+
     // const char* turn_angle = starts_with(raw_str, "ta:");
     Rasp_Command_t cmd_list[16];
     int cmd_list_index = 0;
+
     parse_commands((char*)raw_str, cmd_list, &cmd_list_index);
     for (int i = 0; i < cmd_list_index; i++) {
         if (strcmp(cmd_list[i].cmd, "ta") == 0) {
@@ -51,33 +74,28 @@ int rasp_parse_command(const char* raw_str) {
     //     return 1;
     // }
 
-    if (strcmp(raw_str, "start") == 0) {
-        system_stop_flag = 0;
-    } else if (strcmp(raw_str, "stop") == 0) {
-        system_stop_flag = 1;
-    } else if (strcmp(raw_str, "beep") == 0) {
-        buzzer_on(100);
-    }
     
     return 1;
 }
 
-// UART接收完成 1byte 回调函数
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     if (huart->Instance == USART1) {
-        if (rx_index < RX_BUF_SIZE - 1) {
-            rx_buffer[rx_index++] = rx_byte;
-        }
-
-        if (rx_byte == '\n' || rx_byte == '\r') {
-            rx_buffer[rx_index-1] = '\0';
-            rasp_parse_command((char*)rx_buffer);
-            rx_index = 0;
-        }
-
-        HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+        rx_buffer[size] = '\0';
+        rasp_parse_commands();
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUF_SIZE);
+         // 关闭DMA过半中断
+        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
     }
 }
+
+// void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+//     if (huart->Instance == USART1) {
+//         // rasp_parse_commands();
+//         usart_info("Received: %s", rx_buffer);
+//         // HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUF_SIZE);
+//         HAL_UART_Receive_IT(&huart1, rx_buffer, 6);
+//     }
+// }
 
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index) {
     Rasp_Command_t cmd_t = {0};
