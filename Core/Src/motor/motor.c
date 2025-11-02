@@ -1,10 +1,8 @@
 #include "tim.h"
 #include <stdlib.h>
 #include "motor.h"
-#include "motor_left.h"
-#include "motor_right.h"
 
-typedef struct {
+typedef struct { 
 	uint8_t is_initialized;
 	int8_t current_left_speed; // -100 to 100
 	int8_t current_right_speed;
@@ -33,8 +31,8 @@ void Motor_Init(void) {
 }
 
 void Motor_Set_Speed(int8_t speed) {
-	Motor_Left_Set_Speed(speed);
-	Motor_Right_Set_Speed(speed);
+	Motor_Left_Set_Raw_Speed(speed);
+	Motor_Right_Set_Raw_Speed(speed);
 }
 
 

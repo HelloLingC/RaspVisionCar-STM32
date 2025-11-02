@@ -27,6 +27,12 @@
 
 void Motor_Init(void) ;
 void Motor_Set_Speed(int8_t speed);
-void Motor_Brake(void);
 void Motor_Wakeup(void);
+
+void Motor_Left_Set_Raw_Speed(int16_t l_pwm);
+void Motor_Right_Set_Raw_Speed(int16_t r_pwm);
+
+void Motor_Left_ALL_RESET(void);
+void Motor_Right_ALL_RESET(void);
+
 

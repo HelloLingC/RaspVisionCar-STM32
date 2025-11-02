@@ -1,7 +1,5 @@
 #include "feedforward_controller.h"
 #include "motor.h"
-#include "motor_left.h"
-#include "motor_right.h"
 
 typedef struct {
     FF_Params params;
@@ -47,8 +45,8 @@ void ff_update_100ms(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     int8_t left_pwm = ff_compute_pwm_from_rpm((float)s_ff.target_left_rpm);
     int8_t right_pwm = ff_compute_pwm_from_rpm((float)s_ff.target_right_rpm);
 
-    Motor_Left_Set_Speed(left_pwm);
-    Motor_Right_Set_Speed(right_pwm);
+    Motor_Left_Set_Raw_Speed(left_pwm);
+    Motor_Right_Set_Raw_Speed(right_pwm);
 }
 
 

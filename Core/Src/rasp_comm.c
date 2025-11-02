@@ -1,7 +1,5 @@
 #include "rasp_comm.h"
 #include "main.h"
-#include "motor_left.h"
-#include "motor_right.h"
 // #include "cJSON.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -65,22 +63,16 @@ int rasp_parse_commands() {
     for (int i = 0; i < cmd_list_index; i++) {
         if (strcmp(cmd_list[i].cmd, "ta") == 0) {
             sTurnAngle = atoi(cmd_list[i].param);
-            // usart_info("turn_angle: %d", sTurnAngle);
+            usart_info("turn_angle: %d", sTurnAngle);
         }
     }
-    // if (turn_angle) {
-    //     sTurnAngle = atoi(turn_angle);
-    //     usart_info("turn_angle: %d", sTurnAngle);
-    //     return 1;
-    // }
-
-    
     return 1;
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     if (huart->Instance == USART1) {
-        rx_buffer[size] = '\0';
+        // notice that some ppl say size may can be real_size-1 or +1
+        rx_buffer[size] = '\0'; 
         rasp_parse_commands();
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUF_SIZE);
          // 关闭DMA过半中断

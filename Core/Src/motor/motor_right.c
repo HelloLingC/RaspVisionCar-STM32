@@ -1,4 +1,3 @@
-#include "motor_right.h"
 #include "motor.h"
 
 #include <stdlib.h>

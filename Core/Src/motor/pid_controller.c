@@ -1,7 +1,7 @@
 #include "pid_controller.h"
-#include "motor_left.h"
-#include "motor_right.h"
 #include "main.h"
+#include "motor.h"
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -17,9 +17,6 @@ PID_Handle s_pid;
 extern TIM_HandleTypeDef htim1;
 
 extern UART_HandleTypeDef huart1;
-
-void  Motor_Left_Set_Raw_Speed(int16_t l_pwm);
-void  Motor_Right_Set_Raw_Speed(int16_t r_pwm);
 
 void pid_init_default(void)
 {
@@ -91,20 +88,21 @@ void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_last_right_err = s_pid.last_right_err;
     s_pid.last_right_err = r_err;
 
-    char message[100];
-    snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
-    HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
+    // char message[100];
+    // snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
+    // HAL_UART_Transmit(&huart1, message, strlen(message), 100);
 
     extern volatile int sTurnAngle;
-    // if(sTurnAngle != 0) {
-    //     if(sTurnAngle > 0) {
-    //         s_pid.left_output = s_pid.left_output * (100 + sTurnAngle) / 100;
-    //         s_pid.right_output = s_pid.right_output * (100 - sTurnAngle) / 100;
-    //     } else {
-    //         s_pid.left_output = s_pid.left_output * (100 - sTurnAngle) / 100;
-    //         s_pid.right_output = s_pid.right_output * (100 + sTurnAngle) / 100;
-    //     }
-    // }
+    static int16_t left_t_x = 20;
+    if(sTurnAngle != 0) {
+        if(sTurnAngle > 0) {
+            s_pid.left_output = s_pid.left_output  + (sTurnAngle * left_t_x);
+            s_pid.right_output = s_pid.right_output  - (sTurnAngle * left_t_x);
+        } else {
+            s_pid.left_output = s_pid.left_output - (sTurnAngle * left_t_x);
+            s_pid.right_output = s_pid.right_output  + (sTurnAngle * left_t_x);
+        }
+    }
     Motor_Left_Set_Raw_Speed((int16_t)s_pid.left_output);
     Motor_Right_Set_Raw_Speed((int16_t)s_pid.right_output);
 }

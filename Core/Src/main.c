@@ -27,8 +27,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "motor.h"
-#include "motor_left.h"
-#include "motor_right.h"
 #include "rasp_comm.h"
 #include "justfloat.h"
 #include "ssd1306.h"
@@ -181,16 +179,9 @@ int main(void)
       
       // 进入停止状态循环
       buzzer_on(100);
-      int beep_count = 0;
       while (system_stop_flag) {
         buzzer_update();
         // HAL_Delay(30);
-        // if (beep_count == 0) {
-        //   buzzer_on(80);
-        //   HAL_Delay(80);
-        //   buzzer_off();
-        //   beep_count++;
-        // }
       }
       
       // 如果收到重新启动命令，重新初始化系统
