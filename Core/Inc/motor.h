@@ -1,5 +1,3 @@
-#include "main.h"
-
 #ifndef MOTOR_CONTROL_H
 #define MOTOR_CONTROL_H
 
@@ -23,10 +21,17 @@
 #define MOTOR_BIN2_PIN GPIO_PIN_5
 #define MOTOR_BIN2_PORT GPIOA
 
-#endif
+void motor_controller_set_left_target_rpm(int16_t left_rpm);
+void motor_controller_set_right_target_rpm(int16_t right_rpm);
+void motor_controller_set_target_rpm(int16_t left_rpm, int16_t right_rpm);
+
+void motor_controller_set_turn_angle(int16_t turn_angle);
+int16_t motor_controller_get_turn_angle();
+void motor_controller_get_real_target_rpm(int16_t *left_rpm, int16_t *right_rpm);
+void motor_controller_update();
 
 void Motor_Init(void) ;
-void Motor_Set_Speed(int8_t speed);
+void Motor_Set_Speed(int16_t speed);
 void Motor_Wakeup(void);
 
 void Motor_Left_Set_Raw_Speed(int16_t l_pwm);
@@ -35,4 +40,5 @@ void Motor_Right_Set_Raw_Speed(int16_t r_pwm);
 void Motor_Left_ALL_RESET(void);
 void Motor_Right_ALL_RESET(void);
 
+#endif
 

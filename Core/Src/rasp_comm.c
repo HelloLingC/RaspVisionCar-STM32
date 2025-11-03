@@ -10,7 +10,7 @@
 #include "stm32f1xx_hal_dma.h"
 #include "stm32f1xx_hal_uart.h"
 #include "usart.h"
-#include "pid_controller.h"
+#include "motor.h"
 
 #define RX_BUF_SIZE 64
 
@@ -41,7 +41,6 @@ const char* starts_with(const char *str, const char *prefix) {
     return NULL;
 }
 
-extern volatile int sTurnAngle;
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index);
 // I was planning to use cJSON at the beginning, but it's too heavy for this project
 int rasp_parse_commands() {
@@ -64,16 +63,16 @@ int rasp_parse_commands() {
     for (int i = 0; i < cmd_list_index; i++) {
         if (strcmp(cmd_list[i].cmd, "ta") == 0) {
             // Turn Angle
-            sTurnAngle = atoi(cmd_list[i].param);
+            motor_controller_set_turn_angle(atoi(cmd_list[i].param));
             // usart_info("turn_angle: %d", sTurnAngle);
         } else if (strcmp(cmd_list[i].cmd, "lv") == 0) {
             // Left Velocity
             int16_t left_rpm = atoi(cmd_list[i].param);
-            s_pid.target_left_rpm = left_rpm;
+            motor_controller_set_left_target_rpm(left_rpm);
         } else if (strcmp(cmd_list[i].cmd, "rv") == 0) {
             // Right Velocity
             int16_t right_rpm = atoi(cmd_list[i].param);
-            s_pid.target_right_rpm = right_rpm;
+            motor_controller_set_right_target_rpm(right_rpm);
         }
     }
     return 1;

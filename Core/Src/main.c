@@ -35,11 +35,6 @@
 #include "pid_controller.h"
 #include "buzzer.h"
 
-void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output);
-void Motor_Left_Set_Raw_Speed(int16_t pwm_value);
-void Motor_Right_Set_Raw_Speed(int16_t pwm_value);
-
-volatile int sTurnAngle = 0;
 // Add this in your main.h or similar header file
 
 /* USER CODE END Includes */
@@ -124,21 +119,20 @@ int main(void)
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
-  SSD1306_Init();
-  init_encoders();
-  Motor_Init();
-  //ff_init_default();
-  rasp_comm_init();
-
   // Enable DWT (Data Watchpoint and Trace) unit
   // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // DWT->CYCCNT = 0;
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
+  SSD1306_Init();
+  rasp_comm_init();
+
+  init_encoders();
+  Motor_Init();
+  ff_init_default();
   pid_init_default();
-  sTurnAngle = 0;
-  int16_t target_rpm = 30;
-  pid_set_target_rpm(target_rpm, target_rpm);
+
+  motor_controller_set_turn_angle(0);
 
   HAL_TIM_Base_Start_IT(&htim1);
   // 启动比较中断
@@ -157,8 +151,8 @@ int main(void)
     if (system_stop_flag) {
       
       // 停止所有电机
-      Motor_Left_Set_Raw_Speed(0);
-      Motor_Right_Set_Raw_Speed(0);
+      Motor_Set_Speed(0);
+      motor_controller_set_target_rpm(0, 0);
       
       // 停止定时器
       HAL_TIM_Base_Stop_IT(&htim1);
@@ -208,7 +202,10 @@ int main(void)
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
       char targets_str[18];
-      snprintf(targets_str, sizeof(targets_str), "V: %d, %d T: %d", s_pid.target_left_rpm, s_pid.target_right_rpm, sTurnAngle);
+      int16_t real_target_left_rpm = 0, real_target_right_rpm = 0;
+      motor_controller_get_real_target_rpm(&real_target_left_rpm, &real_target_right_rpm);
+      int16_t turn_angle = motor_controller_get_turn_angle();
+      snprintf(targets_str, sizeof(targets_str), "V: %d, %d T: %d", real_target_left_rpm, real_target_right_rpm, turn_angle);
       SSD1306_GotoXY(0, 30);
       SSD1306_Puts(targets_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
@@ -289,15 +286,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
       case HAL_TIM_ACTIVE_CHANNEL_4:
         // 20ms任务
         encoder_update_10ms();
-        int16_t l_rpm = 0, r_rpm = 0;
-        encoder_get_motor_speed(&l_rpm, &r_rpm);
-
-        pid_update(l_rpm, r_rpm);
-
-        // char message[100];
-        // snprintf(message, sizeof(message), "<main%u>:%d,%d.%d\n", HAL_GetTick(), l_rpm, r_rpm, sTurnAngle);
-        // HAL_UART_Transmit(&huart1, message, strlen(message), HAL_MAX_DELAY);
-        
+        motor_controller_update();
         // 重新设置下一个20ms触发点（200计数 = 20ms）
         uint32_t current_count = __HAL_TIM_GET_COUNTER(&htim1);
         uint32_t next_compare = (current_count + 200) % 10000;

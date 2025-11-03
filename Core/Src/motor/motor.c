@@ -30,7 +30,7 @@ void Motor_Init(void) {
 	Motor_Right_ALL_RESET();
 }
 
-void Motor_Set_Speed(int8_t speed) {
+void Motor_Set_Speed(int16_t speed) {
 	Motor_Left_Set_Raw_Speed(speed);
 	Motor_Right_Set_Raw_Speed(speed);
 }

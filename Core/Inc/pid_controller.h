@@ -37,7 +37,8 @@ void pid_init(const PID_Params* left_params, const PID_Params* right_params);
 // Set target wheel speeds in RPM
 void pid_set_target_rpm(int16_t left_target_rpm, int16_t right_target_rpm);
 
-void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm);
+void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm,
+     int16_t *left_pwm, int16_t *right_pwm);
 
 // Optional helpers
 void pid_reset(void);

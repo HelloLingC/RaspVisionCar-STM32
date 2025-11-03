@@ -3,7 +3,7 @@
 #define BUZZER_PIN GPIO_PIN_14
 #define BUZZER_PORT GPIOC
 
-uint8_t buzzer_active_flag = 0;
+volatile uint8_t buzzer_active_flag = 0;
 uint16_t when_buzzer_should_end = 0;
 
 #define QUEUE_MAX_SIZE 12

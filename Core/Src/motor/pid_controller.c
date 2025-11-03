@@ -43,9 +43,6 @@ void pid_init(const PID_Params* left_p, const PID_Params* right_p)
 
 void pid_reset(void)
 {
-    s_pid.target_left_rpm = 0;
-    s_pid.target_right_rpm = 0;
-
     s_pid.last_left_err = 0;
     s_pid.last_last_left_err = 0;
 
@@ -57,27 +54,16 @@ void pid_reset(void)
     s_pid.right_output = 0.0f;
 }
 
-void pid_set_target_rpm(int16_t left_target_rpm, int16_t right_target_rpm)
-{
-    s_pid.target_left_rpm = left_target_rpm;
-    s_pid.target_right_rpm = right_target_rpm;
-}
-
-extern volatile int sTurnAngle;
-void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm) {
+void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm,
+     int16_t *left_pwm, int16_t *right_pwm) {
     //static const float dt = 0.01f;  // 采样时间
 
-    int16_t target_left_rpm_temp = s_pid.target_left_rpm;
-    int16_t target_right_rpm_temp = s_pid.target_right_rpm;
-
-    if(sTurnAngle != 0) {
-        // positive: 左转时，左轮转速减小，右轮转速增大
-        target_left_rpm_temp -= sTurnAngle;
-        target_right_rpm_temp += sTurnAngle;
-      }
-
-    int16_t l_err = target_left_rpm_temp - left_meas_rpm;
-    int16_t r_err = target_right_rpm_temp - right_meas_rpm;
+    int16_t target_left_rpm = 0;
+    int16_t target_right_rpm = 0;
+    motor_controller_get_real_target_rpm(&target_left_rpm, &target_right_rpm);
+    
+    int16_t l_err = target_left_rpm - left_meas_rpm;
+    int16_t r_err = target_right_rpm - right_meas_rpm;
 
     // 增量式PID计算
     float l_delta = s_pid.left_params.kP * (l_err - s_pid.last_left_err) +
@@ -98,12 +84,12 @@ void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_last_right_err = s_pid.last_right_err;
     s_pid.last_right_err = r_err;
 
-    char message[100];
-    snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
-    HAL_UART_Transmit(&huart1, message, strlen(message), 100);
+    // char message[100];
+    // snprintf(message, sizeof(message), "%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
+    // HAL_UART_Transmit_IT(&huart1, message, strlen(message));
 
-    Motor_Left_Set_Raw_Speed((int16_t)s_pid.left_output);
-    Motor_Right_Set_Raw_Speed((int16_t)s_pid.right_output);
+    *left_pwm = (int16_t)s_pid.left_output;
+    *right_pwm = (int16_t)s_pid.right_output;
 }
 
 // void PID_Calc(int16_t left_current, int16_t right_current, float* left_output, float* right_output) {
