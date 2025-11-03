@@ -63,11 +63,21 @@ void pid_set_target_rpm(int16_t left_target_rpm, int16_t right_target_rpm)
     s_pid.target_right_rpm = right_target_rpm;
 }
 
+extern volatile int sTurnAngle;
 void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     //static const float dt = 0.01f;  // 采样时间
 
-    int16_t l_err = s_pid.target_left_rpm - left_meas_rpm;
-    int16_t r_err = s_pid.target_right_rpm - right_meas_rpm;
+    int16_t target_left_rpm_temp = s_pid.target_left_rpm;
+    int16_t target_right_rpm_temp = s_pid.target_right_rpm;
+
+    if(sTurnAngle != 0) {
+        // positive: 左转时，左轮转速减小，右轮转速增大
+        target_left_rpm_temp -= sTurnAngle;
+        target_right_rpm_temp += sTurnAngle;
+      }
+
+    int16_t l_err = target_left_rpm_temp - left_meas_rpm;
+    int16_t r_err = target_right_rpm_temp - right_meas_rpm;
 
     // 增量式PID计算
     float l_delta = s_pid.left_params.kP * (l_err - s_pid.last_left_err) +
@@ -88,21 +98,10 @@ void pid_update(int16_t left_meas_rpm, int16_t right_meas_rpm) {
     s_pid.last_last_right_err = s_pid.last_right_err;
     s_pid.last_right_err = r_err;
 
-    // char message[100];
-    // snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
-    // HAL_UART_Transmit(&huart1, message, strlen(message), 100);
+    char message[100];
+    snprintf(message, sizeof(message), "<pid>:%d, %d, %d, %d, %d, %d, %d\n", s_pid.target_left_rpm, left_meas_rpm, (int16_t)s_pid.left_output, right_meas_rpm, (int16_t)s_pid.right_output, (int16_t)l_err, (int16_t)r_err);
+    HAL_UART_Transmit(&huart1, message, strlen(message), 100);
 
-    extern volatile int sTurnAngle;
-    static int16_t left_t_x = 20;
-    if(sTurnAngle != 0) {
-        if(sTurnAngle > 0) {
-            s_pid.left_output = s_pid.left_output  + (sTurnAngle * left_t_x);
-            s_pid.right_output = s_pid.right_output  - (sTurnAngle * left_t_x);
-        } else {
-            s_pid.left_output = s_pid.left_output - (sTurnAngle * left_t_x);
-            s_pid.right_output = s_pid.right_output  + (sTurnAngle * left_t_x);
-        }
-    }
     Motor_Left_Set_Raw_Speed((int16_t)s_pid.left_output);
     Motor_Right_Set_Raw_Speed((int16_t)s_pid.right_output);
 }

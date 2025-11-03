@@ -136,7 +136,8 @@ int main(void)
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   pid_init_default();
-  int16_t target_rpm = 0;
+  sTurnAngle = 0;
+  int16_t target_rpm = 30;
   pid_set_target_rpm(target_rpm, target_rpm);
 
   HAL_TIM_Base_Start_IT(&htim1);
@@ -200,21 +201,22 @@ int main(void)
       SSD1306_GotoXY(0, 0);
       SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_GotoXY(0, 15);
-      SSD1306_Puts("Status: Running", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 30);
-
-      
       SSD1306_Puts("UPT:", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(35, 30);
+      SSD1306_GotoXY(35, 15);
       char time_str[12];
       snprintf(time_str, sizeof(time_str), "%us", (unsigned int)(HAL_GetTick() / 1000));
       SSD1306_Puts(time_str, &Font_7x10, SSD1306_COLOR_WHITE);
 
+      char targets_str[18];
+      snprintf(targets_str, sizeof(targets_str), "V: %d, %d T: %d", s_pid.target_left_rpm, s_pid.target_right_rpm, sTurnAngle);
+      SSD1306_GotoXY(0, 30);
+      SSD1306_Puts(targets_str, &Font_7x10, SSD1306_COLOR_WHITE);
+
       int16_t l_rpm = 0, r_rpm = 0;
       encoder_get_motor_speed(&l_rpm, &r_rpm);
-      SSD1306_GotoXY(0, 45);
       char speed_str[18];
       snprintf(speed_str, sizeof(speed_str), "MTR: %d %d rpm", l_rpm, r_rpm);
+      SSD1306_GotoXY(0, 45);
       SSD1306_Puts(speed_str, &Font_7x10, SSD1306_COLOR_WHITE);
       SSD1306_UpdateScreen();
 
@@ -289,7 +291,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         encoder_update_10ms();
         int16_t l_rpm = 0, r_rpm = 0;
         encoder_get_motor_speed(&l_rpm, &r_rpm);
-        // PID_Calc(l_rpm, r_rpm, &left_output, &right_output);
+
         pid_update(l_rpm, r_rpm);
 
         // char message[100];

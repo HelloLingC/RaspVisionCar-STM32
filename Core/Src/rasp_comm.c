@@ -10,6 +10,7 @@
 #include "stm32f1xx_hal_dma.h"
 #include "stm32f1xx_hal_uart.h"
 #include "usart.h"
+#include "pid_controller.h"
 
 #define RX_BUF_SIZE 64
 
@@ -62,8 +63,17 @@ int rasp_parse_commands() {
     parse_commands((char*)raw_str, cmd_list, &cmd_list_index);
     for (int i = 0; i < cmd_list_index; i++) {
         if (strcmp(cmd_list[i].cmd, "ta") == 0) {
+            // Turn Angle
             sTurnAngle = atoi(cmd_list[i].param);
-            usart_info("turn_angle: %d", sTurnAngle);
+            // usart_info("turn_angle: %d", sTurnAngle);
+        } else if (strcmp(cmd_list[i].cmd, "lv") == 0) {
+            // Left Velocity
+            int16_t left_rpm = atoi(cmd_list[i].param);
+            s_pid.target_left_rpm = left_rpm;
+        } else if (strcmp(cmd_list[i].cmd, "rv") == 0) {
+            // Right Velocity
+            int16_t right_rpm = atoi(cmd_list[i].param);
+            s_pid.target_right_rpm = right_rpm;
         }
     }
     return 1;
