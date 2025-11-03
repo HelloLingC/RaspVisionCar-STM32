@@ -15,8 +15,8 @@ void ff_init_default(void) {
         .kA = 0.0f,     // 加速度前馈
     };
     FF_Params right_p = {
-        .kV = 0.0f,    // 占空比/每RPM 的比例
-        .kS = 0.0f,     // 根据实车标定再调
+        .kV = 20.4f,    // 占空比/每RPM 的比例
+        .kS = -57.76f,     // 根据实车标定再调
         .kA = 0.0f,     // 加速度前馈
     };
     s_ff.left_params = left_p;

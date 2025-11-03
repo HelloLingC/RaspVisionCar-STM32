@@ -52,7 +52,7 @@ int rasp_parse_commands() {
     } else if (strcmp(raw_str, "stop\n") == 0) {
         system_stop_flag = 1;
     } else if (strcmp(raw_str, "beep\n") == 0) {
-        buzzer_on(100);
+        buzzer_on(5);
     }
 
     // const char* turn_angle = starts_with(raw_str, "ta:");

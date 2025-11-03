@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "encoder.h"
+#include "main.h"
 #include "pid_controller.h"
 #include "feedforward_controller.h"
 #include "motor.h"
@@ -41,9 +42,28 @@ void motor_controller_get_real_target_rpm(int16_t *left_rpm, int16_t *right_rpm)
 }
 
 // 里程计
-uint32_t sOdometerLeft = 0;
-uint32_t sOdometerRight = 0;
+int32_t sOdometerLeft = 0;
+int32_t sOdometerRight = 0;
 
+void motor_movements() {
+    // Go straight
+    if(sOdometerLeft < 12500) {
+        motor_controller_set_turn_angle(0);
+        motor_controller_set_target_rpm(70, 70);
+    }
+    // Turn Left
+    if(sOdometerLeft >= 12500 && sOdometerLeft < 13900) {
+        motor_controller_set_turn_angle(30);
+        // motor_controller_set_target_rpm(70, 70);
+    }
+    // Go straight
+    if(sOdometerLeft >= 13900) {
+      motor_controller_set_turn_angle(0);
+      
+    }
+}
+
+extern volatile uint8_t system_stop_flag;
 void motor_controller_update() {
   int16_t l_rpm = 0, r_rpm = 0;
   encoder_get_motor_speed(&l_rpm, &r_rpm);
@@ -51,6 +71,9 @@ void motor_controller_update() {
   // we havent consider backward situation
   sOdometerLeft += l_rpm;
   sOdometerRight += r_rpm;
+  if(!system_stop_flag) {
+    motor_movements();
+  }
 
   real_target_left_rpm = target_left_rpm;
   real_target_right_rpm = target_right_rpm;
@@ -72,8 +95,8 @@ void motor_controller_update() {
   Motor_Right_Set_Raw_Speed(pid_right_pwm + ff_right_pwm);
 
   char message[100];
-  snprintf(message, sizeof(message), "<main%u>:%d,%d,%d,%d\n", HAL_GetTick(),
-           l_rpm, r_rpm, ff_left_pwm, pid_right_pwm);
+  snprintf(message, sizeof(message), "<main%u>:%d,%d,%d,%d,%d,%d\n", HAL_GetTick(),
+           l_rpm, r_rpm, pid_left_pwm, pid_right_pwm, sOdometerLeft, sOdometerRight);
   HAL_UART_Transmit_IT(&huart1, message, strlen(message));
 
 }

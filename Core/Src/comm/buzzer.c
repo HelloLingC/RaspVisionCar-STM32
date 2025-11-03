@@ -3,8 +3,8 @@
 #define BUZZER_PIN GPIO_PIN_14
 #define BUZZER_PORT GPIOC
 
-volatile uint8_t buzzer_active_flag = 0;
-uint16_t when_buzzer_should_end = 0;
+uint8_t buzzer_active_flag = 0;
+uint32_t buzzer_timer = 0;
 
 #define QUEUE_MAX_SIZE 12
 
@@ -46,21 +46,23 @@ uint16_t buzzer_dequeue(void) {
     return buzzer_queue.data[buzzer_queue.front];
 }
 
-void buzzer_on(uint16_t duration_ms) {
+// duration * 20ms = duration_ms
+void buzzer_on(uint16_t duration) {
     HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_SET);
     buzzer_active_flag = 1;
-    when_buzzer_should_end = HAL_GetTick() + duration_ms;
+    buzzer_timer = duration;
 }
 
 void buzzer_off(void) {
     HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET);
     buzzer_active_flag = 0;
-    when_buzzer_should_end = 0;
+    buzzer_timer = 0;
 }
 
 void buzzer_update(void) {
     if (buzzer_active_flag) {
-        if (HAL_GetTick() >= when_buzzer_should_end) {
+        buzzer_timer--;
+        if (buzzer_timer <= 0) {
             buzzer_off();
         }
     }

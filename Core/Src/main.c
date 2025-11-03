@@ -34,6 +34,7 @@
 #include "encoder.h"
 #include "pid_controller.h"
 #include "buzzer.h"
+#include "icm42688.h"
 
 // Add this in your main.h or similar header file
 
@@ -125,6 +126,9 @@ int main(void)
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   SSD1306_Init();
+  if(!icm42688_init()) {
+    usart_error("ICM42688 init failed");
+  }
   rasp_comm_init();
 
   init_encoders();
@@ -133,6 +137,7 @@ int main(void)
   pid_init_default();
 
   motor_controller_set_turn_angle(0);
+  motor_controller_set_target_rpm(0, 0);
 
   HAL_TIM_Base_Start_IT(&htim1);
   // 启动比较中断
@@ -141,52 +146,13 @@ int main(void)
 
   usart_info("Rasp Vision Car v1");
   usart_info("Everything is good and ready to go");
+  buzzer_on(3);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    // 检查停止标志
-    if (system_stop_flag) {
-      
-      // 停止所有电机
-      Motor_Set_Speed(0);
-      motor_controller_set_target_rpm(0, 0);
-      
-      // 停止定时器
-      HAL_TIM_Base_Stop_IT(&htim1);
-      HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_1);
-      HAL_TIM_OC_Stop_IT(&htim1, TIM_CHANNEL_4);
-      
-      // 更新OLED显示停止状态
-      SSD1306_Fill(SSD1306_COLOR_BLACK);
-      SSD1306_GotoXY(0, 0);
-      SSD1306_Puts("Rasp Vision Car v1", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 15);
-      SSD1306_Puts("Status: STOPPED", &Font_7x10, SSD1306_COLOR_WHITE);
-      SSD1306_GotoXY(0, 30);
-      SSD1306_Puts("System Halted", &Font_7x10, SSD1306_COLOR_WHITE);
-
-      SSD1306_UpdateScreen();
-
-      usart_info("System Stopped");
-      
-      // 进入停止状态循环
-      buzzer_on(100);
-      while (system_stop_flag) {
-        buzzer_update();
-        // HAL_Delay(30);
-      }
-      
-      // 如果收到重新启动命令，重新初始化系统
-      buzzer_on(100);
-      HAL_TIM_Base_Start_IT(&htim1);
-      HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
-      HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
-    }
-    buzzer_update();
-
     // Update OLED display
     uint32_t current_time = HAL_GetTick();
     static uint32_t last_status_time = 0;
@@ -285,6 +251,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         break;
       case HAL_TIM_ACTIVE_CHANNEL_4:
         // 20ms任务
+        buzzer_update();
         encoder_update_10ms();
         motor_controller_update();
         // 重新设置下一个20ms触发点（200计数 = 20ms）
