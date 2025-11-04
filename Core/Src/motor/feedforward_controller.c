@@ -23,9 +23,16 @@ void ff_init_default(void) {
     s_ff.right_params = right_p;
 }
 
-static int16_t ff_compute_pwm_from_rpm(float rpm_cmd) {
+static int16_t ff_compute_left_pwm(float rpm_cmd) {
     float sign = (rpm_cmd > 0.0f) - (rpm_cmd < 0.0f);
     float u = s_ff.left_params.kS * sign + s_ff.left_params.kV * rpm_cmd;
+    // kA*accel 可后续加入
+    return (int16_t)u;
+}
+
+static int16_t ff_compute_right_pwm(float rpm_cmd) {
+    float sign = (rpm_cmd > 0.0f) - (rpm_cmd < 0.0f);
+    float u = s_ff.right_params.kS * sign + s_ff.right_params.kV * rpm_cmd;
     // kA*accel 可后续加入
     return (int16_t)u;
 }
@@ -34,8 +41,8 @@ void ff_update(int16_t left_target_rpm, int16_t right_target_rpm,
 int16_t *left_pwm, int16_t *right_pwm) {
     // 纯前馈：忽略测量，仅由目标给定计算占空比。
     // 如需稳态误差更小，可在此加入微小比例项 e.g. u += kP*(target - meas)
-    *left_pwm = ff_compute_pwm_from_rpm((float)left_target_rpm);
-    *right_pwm = ff_compute_pwm_from_rpm((float)right_target_rpm);
+    *left_pwm = ff_compute_left_pwm((float)left_target_rpm);
+    *right_pwm = ff_compute_right_pwm((float)right_target_rpm);
 }
 
 

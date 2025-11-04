@@ -2,15 +2,6 @@
 #include <stdlib.h>
 #include "motor.h"
 
-typedef struct { 
-	uint8_t is_initialized;
-	int8_t current_left_speed; // -100 to 100
-	int8_t current_right_speed;
-	int isStopped;
-} Motor_HandleTypeDef;
-
-Motor_HandleTypeDef hmotor;
-
 /**
  * @brief Initialize Left&Right Motor
  */

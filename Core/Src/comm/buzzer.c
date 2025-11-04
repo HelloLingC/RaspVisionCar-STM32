@@ -48,9 +48,12 @@ uint16_t buzzer_dequeue(void) {
 
 // duration * 20ms = duration_ms
 void buzzer_on(uint16_t duration) {
-    HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_SET);
-    buzzer_active_flag = 1;
-    buzzer_timer = duration;
+    // if buzzer already active, ignore the request
+    if(!buzzer_active_flag) {
+        HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_SET);
+        buzzer_active_flag = 1;
+        buzzer_timer = duration;
+    }  
 }
 
 void buzzer_off(void) {

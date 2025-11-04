@@ -7,6 +7,7 @@
 #include "usart.h"
 #include <string.h>
 #include <stdio.h>
+#include "buzzer.h"
 
 int16_t target_left_rpm = 0;
 int16_t target_right_rpm = 0;
@@ -41,6 +42,7 @@ void motor_controller_get_real_target_rpm(int16_t *left_rpm, int16_t *right_rpm)
   *right_rpm = real_target_right_rpm;
 }
 
+
 // 里程计
 int32_t sOdometerLeft = 0;
 int32_t sOdometerRight = 0;
@@ -54,6 +56,7 @@ void motor_movements() {
     // Turn Left
     if(sOdometerLeft >= 12500 && sOdometerLeft < 13900) {
         motor_controller_set_turn_angle(30);
+        buzzer_on(1);
         // motor_controller_set_target_rpm(70, 70);
     }
     // Go straight
@@ -94,9 +97,9 @@ void motor_controller_update() {
   Motor_Left_Set_Raw_Speed(pid_left_pwm + ff_left_pwm);
   Motor_Right_Set_Raw_Speed(pid_right_pwm + ff_right_pwm);
 
-  char message[100];
-  snprintf(message, sizeof(message), "<main%u>:%d,%d,%d,%d,%d,%d\n", HAL_GetTick(),
-           l_rpm, r_rpm, pid_left_pwm, pid_right_pwm, sOdometerLeft, sOdometerRight);
-  HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+  // char message[100];
+  // snprintf(message, sizeof(message), "<main%u>:%d,%d,%d,%d,%d,%d\n", HAL_GetTick(),
+  //          l_rpm, r_rpm, pid_left_pwm, pid_right_pwm, sOdometerLeft, sOdometerRight);
+  // HAL_UART_Transmit_IT(&huart1, message, strlen(message));
 
 }

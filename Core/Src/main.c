@@ -20,6 +20,10 @@
 #include "main.h"
 #include "dma.h"
 #include "i2c.h"
+#include "spi.h"
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_def.h"
+#include "stm32f1xx_hal_spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -35,6 +39,7 @@
 #include "pid_controller.h"
 #include "buzzer.h"
 #include "icm42688.h"
+#include "ahrs_hal.h"
 
 // Add this in your main.h or similar header file
 
@@ -78,6 +83,8 @@ uint32_t get_tick_ms(void)
     return cycles / (SystemCoreClock / 1000);
 }
 
+void imu_init();
+void imu_update();
 /* USER CODE END 0 */
 
 /**
@@ -117,7 +124,7 @@ int main(void)
   MX_I2C1_Init();
   MX_USART2_UART_Init();
   MX_TIM1_Init();
-  MX_I2C2_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
   // Enable DWT (Data Watchpoint and Trace) unit
@@ -126,10 +133,11 @@ int main(void)
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
   SSD1306_Init();
-  if(!icm42688_init()) {
-    usart_error("ICM42688 init failed");
-  }
   rasp_comm_init();
+
+  HAL_Delay(1000); // delay for icm42688 starting
+  imu_init();
+  HAL_Delay(1000);
 
   init_encoders();
   Motor_Init();
@@ -144,8 +152,9 @@ int main(void)
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_4);
 
+  usart_info("========================================");
   usart_info("Rasp Vision Car v1");
-  usart_info("Everything is good and ready to go");
+  usart_info("========================================");
   buzzer_on(3);
 
   /* USER CODE END 2 */
@@ -254,6 +263,13 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         buzzer_update();
         encoder_update_10ms();
         motor_controller_update();
+
+       
+        // char message[100];
+        // snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
+        //         round(current_attitude.pitch), round(current_attitude.roll), round(current_attitude.yaw));
+        // HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+
         // 重新设置下一个20ms触发点（200计数 = 20ms）
         uint32_t current_count = __HAL_TIM_GET_COUNTER(&htim1);
         uint32_t next_compare = (current_count + 200) % 10000;

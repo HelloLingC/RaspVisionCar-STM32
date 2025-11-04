@@ -42,6 +42,8 @@ const char* starts_with(const char *str, const char *prefix) {
 }
 
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index);
+extern int32_t sOdometerLeft;
+extern int32_t sOdometerRight;
 // I was planning to use cJSON at the beginning, but it's too heavy for this project
 int rasp_parse_commands() {
     const char* raw_str = (const char*) rx_buffer;
@@ -53,6 +55,9 @@ int rasp_parse_commands() {
         system_stop_flag = 1;
     } else if (strcmp(raw_str, "beep\n") == 0) {
         buzzer_on(5);
+    } else if (strcmp(raw_str, "reset\n") == 0) {
+        sOdometerLeft = 0;
+        sOdometerRight = 0;
     }
 
     // const char* turn_angle = starts_with(raw_str, "ta:");
