@@ -7,6 +7,7 @@
 #include "usart.h"
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "buzzer.h"
 
 int16_t target_left_rpm = 0;
@@ -46,6 +47,7 @@ void motor_controller_get_real_target_rpm(int16_t *left_rpm, int16_t *right_rpm)
 // 里程计
 int32_t sOdometerLeft = 0;
 int32_t sOdometerRight = 0;
+extern float yaw;
 
 void motor_movements() {
     // Go straight
@@ -54,9 +56,13 @@ void motor_movements() {
         motor_controller_set_target_rpm(70, 70);
     }
     // Turn Left
-    if(sOdometerLeft >= 12500 && sOdometerLeft < 13800) {
+    if(sOdometerLeft >= 12500) {
+      if(floorf(yaw) < 45) {
         motor_controller_set_turn_angle(30);
         buzzer_on(1);
+      } else {
+        motor_controller_set_turn_angle(0);
+      }
         // motor_controller_set_target_rpm(70, 70);
     }
     // Go straight

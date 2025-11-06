@@ -4,6 +4,8 @@
 #include "spi.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_def.h"
+#include <math.h>
+#include <stdint.h>
 
 /**
  * @brief  ICM42688 I2C通信接口初始化
@@ -41,7 +43,7 @@ static uint8_t icm42688_read_reg(uint8_t reg) {
   return rx[1];
 }
 
-void icm42688_read_regs(uint8_t reg, uint8_t *data, uint8_t len) {
+static void icm42688_read_regs(uint8_t reg, uint8_t *data, uint8_t len) {
   uint8_t reg_addr = reg | 0x80; // 最高位=1 表示读
   ICM42688_CS_LOW();
   HAL_StatusTypeDef s1 = HAL_SPI_Transmit(&hspi2, &reg_addr, 1, 1000);
@@ -72,7 +74,6 @@ static void icm42688_write_reg(uint8_t reg, uint8_t value) {
 static uint32_t ahrs_get_time_us() { return HAL_GetTick(); }
 
 void imu_init() {
-  // IMU init
   // 使用静态变量确保生命周期持续整个程序运行期间
   static icm42688_comm_t icm42688_comm = {
       .init = icm42688_i2c_init,
@@ -104,25 +105,41 @@ void imu_init() {
   ahrs_init_attitude_offset();
 }
 
+float gz_offset;
+uint8_t collected_offests = 0;
+float yaw = 0.0f;
 void imu_update() {
-    icm42688_get_acc();
+    // icm42688_get_acc();
     icm42688_get_gyro();
-    float gx = icm42688_gyro_transition(icm42688_gyro.x) * AHRS_PI / 180.0f; // 转为弧度制
-    float gy = icm42688_gyro_transition(icm42688_gyro.y) * AHRS_PI / 180.0f;
-    float gz = icm42688_gyro_transition(icm42688_gyro.z) * AHRS_PI / 180.0f;
+    // float gx = icm42688_gyro_transition(icm42688_gyro.x) * AHRS_PI / 180.0f; // 转为弧度制
+    // float gy = icm42688_gyro_transition(icm42688_gyro.y) * AHRS_PI / 180.0f;
+    // float gz = icm42688_gyro_transition(icm42688_gyro.z);
     
-    float ax = icm42688_acc_transition(icm42688_acc.x);
-    float ay = icm42688_acc_transition(icm42688_acc.y);
-    float az = icm42688_acc_transition(icm42688_acc.z);
+    // float ax = icm42688_acc_transition(icm42688_acc.x);
+    // float ay = icm42688_acc_transition(icm42688_acc.y);
+    // float az = icm42688_acc_transition(icm42688_acc.z);
 
     // ahrs_update(gx, gy, gz, ax, ay, az, 0, 0, 0);
     // ahrs_euler_angle_t current_attitude;
     // ahrs_get_attitude(&current_attitude);
 
-    char message[100];
-    snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
-            gx, gy, gz);
-    HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+    // 去零飘
+    if(collected_offests < 100) {
+      gz_offset += icm42688_gyro.z;
+      collected_offests++;
+    } else if(collected_offests == 100) {
+      gz_offset /= 100;
+      collected_offests++;
+    } else {
+      float gz = (icm42688_gyro.z - gz_offset) * 0.0038147;
+      yaw += gz * 0.05; // Integral
+      char message[100];
+      snprintf(message, sizeof(message), "<main>:%d\n",
+      (int)floorf(yaw));
+      HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+    }
+    
+    
     // char message[100];
     // snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
     //         round(current_attitude.pitch), round(current_attitude.roll), round(current_attitude.yaw));

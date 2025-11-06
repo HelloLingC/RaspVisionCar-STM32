@@ -21,9 +21,6 @@
 #include "dma.h"
 #include "i2c.h"
 #include "spi.h"
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_def.h"
-#include "stm32f1xx_hal_spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -87,6 +84,43 @@ uint32_t get_tick_ms(void)
 
 void imu_init();
 void imu_update();
+
+#define ICM42688_CS_LOW()   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET)
+#define ICM42688_CS_HIGH()  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET)
+
+#define WHO_AM_I_REG  0x75
+#define WHO_AM_I_VAL  0x47
+
+extern SPI_HandleTypeDef hspi2;
+
+uint8_t ICM42688_ReadReg(uint8_t reg)
+{
+    uint8_t tx[2], rx[2];
+    tx[0] = reg | 0x80; // set MSB=1 for read
+    tx[1] = 0x00;
+
+    ICM42688_CS_LOW();
+    HAL_SPI_Transmit(&hspi2, &tx[0], 1, HAL_MAX_DELAY);
+    HAL_SPI_Receive(&hspi2, &rx[1], 1, HAL_MAX_DELAY);
+    ICM42688_CS_HIGH();
+
+    return rx[1];
+}
+
+void ICM42688_Test(void)
+{
+    HAL_Delay(100); // wait for sensor power-up
+
+    uint8_t whoami = ICM42688_ReadReg(WHO_AM_I_REG);
+    if (whoami == WHO_AM_I_VAL)
+    {
+        usart_info("ICM42688 detected! WHO_AM_I = 0x%02X\r\n", whoami);
+    }
+    else
+    {
+        usart_info("ICM42688 not detected! Read: 0x%02X\r\n", whoami);
+    }
+}
 /* USER CODE END 0 */
 
 /**
@@ -137,9 +171,9 @@ int main(void)
   SSD1306_Init();
   rasp_comm_init();
 
-  HAL_Delay(3000); // delay for icm42688 starting
+  HAL_Delay(1000); // delay for icm42688 starting
   imu_init();
-  HAL_Delay(1000);
+  // ICM42688_Test();
 
   init_encoders();
   Motor_Init();
@@ -157,7 +191,7 @@ int main(void)
   usart_info("========================================");
   usart_info("Rasp Vision Car v1");
   usart_info("========================================");
-  // buzzer_on(3);
+  buzzer_on(3);
 
   /* USER CODE END 2 */
 
@@ -170,16 +204,7 @@ int main(void)
     }
     if(imu_update_flag) {
       imu_update_flag = 0;
-      icm42688_get_acc();
-      icm42688_get_gyro();
-      float ax = icm42688_acc_transition(icm42688_acc.x);
-    float ay = icm42688_acc_transition(icm42688_acc.y);
-    float az = icm42688_acc_transition(icm42688_acc.z);
-    char message[100];
-    snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
-            ax, ay, az);
-    HAL_UART_Transmit_IT(&huart1, message, strlen(message));
-    
+      imu_update();
     }
     // Update OLED display
     uint32_t current_time = HAL_GetTick();
@@ -277,16 +302,8 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         // 100ms任务
         // imu_update();
         imu_update_flag = 1;
-    // float gx = icm42688_gyro_transition(icm42688_gyro.x) * AHRS_PI / 180.0f; // 转为弧度制
-    // float gy = icm42688_gyro_transition(icm42688_gyro.y) * AHRS_PI / 180.0f;
-    // float gz = icm42688_gyro_transition(icm42688_gyro.z) * AHRS_PI / 180.0f;
-    
-    
-    // ahrs_update(gx, gy, gz, ax, ay, az, 0, 0, 0);
-    // ahrs_euler_angle_t current_attitude;
-    // ahrs_get_attitude(&current_attitude);
 
-        uint32_t next_compare1 = (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) + 1000) % 10000;
+        uint32_t next_compare1 = (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) + 500) % 10000;
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, next_compare1);
         break;
       case HAL_TIM_ACTIVE_CHANNEL_4:

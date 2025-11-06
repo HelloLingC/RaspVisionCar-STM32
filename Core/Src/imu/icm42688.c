@@ -161,13 +161,12 @@
      p_system->delay_ms(10);
      
      // 读取设备ID
-     
      id = p_comm->read_reg(ICM42688_WHO_AM_I);
+     usart_info("IMU WHOAMI: %d", id);
      if(id != ICM42688_ID) {
         usart_error("ICM42688 ID mismatch: %d", ICM42688_ID);
          return 2;  // ID不匹配
      }
-     usart_info("IMU WHOAMI: %d", id);
      
      // 复位并等待
      p_comm->write_reg(ICM42688_DEVICE_CONFIG, 0x01);  // 软复位
