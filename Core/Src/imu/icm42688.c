@@ -225,8 +225,8 @@
          return;
      }
      
-     // 读取陀螺仪数据
-     p_comm->read_regs(ICM42688_GYRO_DATA_X1, buffer, 6);
+    // 读取陀螺仪数据
+    p_comm->read_regs(ICM42688_GYRO_DATA_X1, buffer, 6);
      
      // 合成16位有符号数
      icm42688_gyro.x = (int16_t)((buffer[0] << 8) | buffer[1]);

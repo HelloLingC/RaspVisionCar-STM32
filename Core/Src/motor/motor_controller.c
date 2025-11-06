@@ -54,13 +54,13 @@ void motor_movements() {
         motor_controller_set_target_rpm(70, 70);
     }
     // Turn Left
-    if(sOdometerLeft >= 12500 && sOdometerLeft < 13900) {
+    if(sOdometerLeft >= 12500 && sOdometerLeft < 13800) {
         motor_controller_set_turn_angle(30);
         buzzer_on(1);
         // motor_controller_set_target_rpm(70, 70);
     }
     // Go straight
-    if(sOdometerLeft >= 13900) {
+    if(sOdometerLeft >= 13800) {
       motor_controller_set_turn_angle(0);
       
     }

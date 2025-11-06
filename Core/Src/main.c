@@ -65,6 +65,8 @@
 /* USER CODE BEGIN PV */
 // 系统控制标志
 volatile uint8_t system_stop_flag = 1;
+volatile uint8_t motor_update_flag = 0;
+volatile uint8_t imu_update_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -135,7 +137,7 @@ int main(void)
   SSD1306_Init();
   rasp_comm_init();
 
-  HAL_Delay(1000); // delay for icm42688 starting
+  HAL_Delay(3000); // delay for icm42688 starting
   imu_init();
   HAL_Delay(1000);
 
@@ -155,13 +157,30 @@ int main(void)
   usart_info("========================================");
   usart_info("Rasp Vision Car v1");
   usart_info("========================================");
-  buzzer_on(3);
+  // buzzer_on(3);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+    if(motor_update_flag) {
+      motor_update_flag = 0;
+      motor_controller_update();
+    }
+    if(imu_update_flag) {
+      imu_update_flag = 0;
+      icm42688_get_acc();
+      icm42688_get_gyro();
+      float ax = icm42688_acc_transition(icm42688_acc.x);
+    float ay = icm42688_acc_transition(icm42688_acc.y);
+    float az = icm42688_acc_transition(icm42688_acc.z);
+    char message[100];
+    snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
+            ax, ay, az);
+    HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+    
+    }
     // Update OLED display
     uint32_t current_time = HAL_GetTick();
     static uint32_t last_status_time = 0;
@@ -255,24 +274,29 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
     switch(htim->Channel)
     {
       case HAL_TIM_ACTIVE_CHANNEL_1:
-        // 10ms任务
+        // 100ms任务
+        // imu_update();
+        imu_update_flag = 1;
+    // float gx = icm42688_gyro_transition(icm42688_gyro.x) * AHRS_PI / 180.0f; // 转为弧度制
+    // float gy = icm42688_gyro_transition(icm42688_gyro.y) * AHRS_PI / 180.0f;
+    // float gz = icm42688_gyro_transition(icm42688_gyro.z) * AHRS_PI / 180.0f;
+    
+    
+    // ahrs_update(gx, gy, gz, ax, ay, az, 0, 0, 0);
+    // ahrs_euler_angle_t current_attitude;
+    // ahrs_get_attitude(&current_attitude);
 
+        uint32_t next_compare1 = (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) + 1000) % 10000;
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, next_compare1);
         break;
       case HAL_TIM_ACTIVE_CHANNEL_4:
         // 20ms任务
         buzzer_update();
         encoder_update_10ms();
-        motor_controller_update();
-
+        motor_update_flag = 1;
        
-        // char message[100];
-        // snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
-        //         round(current_attitude.pitch), round(current_attitude.roll), round(current_attitude.yaw));
-        // HAL_UART_Transmit_IT(&huart1, message, strlen(message));
-
         // 重新设置下一个20ms触发点（200计数 = 20ms）
-        uint32_t current_count = __HAL_TIM_GET_COUNTER(&htim1);
-        uint32_t next_compare = (current_count + 200) % 10000;
+        uint32_t next_compare = (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_4) + 200) % 10000;
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, next_compare);
         break;
         default:
@@ -292,8 +316,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
   usart_error("Error: %s", __FUNCTION__);
+  __disable_irq();
   while (1) {
   }
   /* USER CODE END Error_Handler_Debug */

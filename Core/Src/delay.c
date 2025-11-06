@@ -1,34 +1,52 @@
-// To replace HAL_Delay()
+// 使用 DWT 计数器实现微秒/毫秒延时，并覆盖 HAL_Delay()
 #include "stm32f1xx_hal.h"
 
-uint32_t get_tick(void) {
-    return SysTick->VAL;
+// DWT 初始化标记，避免重复初始化
+static uint8_t dwt_initialized = 0;
+
+static void dwt_init_if_needed(void)
+{
+    if (dwt_initialized) {
+        return;
+    }
+    // 使能 DWT 计数器
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // 使能 DWT/ITM
+    DWT->CYCCNT = 0;                                // 计数清零
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;            // 使能 CYCCNT
+    dwt_initialized = 1;
 }
 
-void simple_delay_ms(uint32_t ms) {
-    uint16_t i;
-    while (ms--) {
-        i = 12000;
-        while (i--) {
-            //__NOP();
-        }
+static inline uint32_t cycles_per_us(void)
+{
+    // SystemCoreClock 需在时钟配置后有效（Hz）
+    return (SystemCoreClock / 1000000U);
+}
+
+void delay_us(uint32_t us)
+{
+    if (us == 0U) {
+        return;
+    }
+    dwt_init_if_needed();
+    const uint32_t start = DWT->CYCCNT;
+    const uint32_t ticks = us * cycles_per_us();
+    // 使用减法判断以适配 32 位计数器溢出
+    while ((uint32_t)(DWT->CYCCNT - start) < ticks) {
+        __NOP();
     }
 }
 
-void systick_delay_ms(uint32_t ms) {
-    uint32_t temp;
-    SysTick->LOAD = 9000*ms;
-    SysTick->VAL=0X00;//清空计数器
-    SysTick->CTRL=0X01;//使能，减到零是无动作，采用外部时钟源
-    do
-    {
-    temp=SysTick->CTRL;//读取当前倒计数值
-    }while((temp&0x01)&&(!(temp&(1<<16))));//等待时间到达
-        SysTick->CTRL=0x00; //关闭计数器
-        SysTick->VAL =0X00; //清空计数器
+void delay_ms(uint32_t ms)
+{
+    // 避免 us 乘法溢出，分段调用
+    while (ms--) {
+        delay_us(1000U);
+    }
 }
 
-void delay_ms(uint32_t ms) {
-    systick_delay_ms(ms);
+// 覆盖 HAL 提供的弱符号，实现基于 DWT 的毫秒延时
+void HAL_Delay(uint32_t Delay)
+{
+    delay_ms(Delay);
 }
 

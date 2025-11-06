@@ -41,7 +41,7 @@ static uint8_t icm42688_read_reg(uint8_t reg) {
   return rx[1];
 }
 
-static void icm42688_read_regs(uint8_t reg, uint8_t *data, uint8_t len) {
+void icm42688_read_regs(uint8_t reg, uint8_t *data, uint8_t len) {
   uint8_t reg_addr = reg | 0x80; // 最高位=1 表示读
   ICM42688_CS_LOW();
   HAL_StatusTypeDef s1 = HAL_SPI_Transmit(&hspi2, &reg_addr, 1, 1000);
@@ -73,16 +73,17 @@ static uint32_t ahrs_get_time_us() { return HAL_GetTick(); }
 
 void imu_init() {
   // IMU init
-  icm42688_comm_t icm42688_comm = {
+  // 使用静态变量确保生命周期持续整个程序运行期间
+  static icm42688_comm_t icm42688_comm = {
       .init = icm42688_i2c_init,
       .read_reg = icm42688_read_reg,
       .write_reg = icm42688_write_reg,
       .read_regs = icm42688_read_regs,
   };
-  icm42688_system_t icm42688_system = {
+  static icm42688_system_t icm42688_system = {
       .delay_ms = icm42688_delay_ms,
   };
-  icm42688_config_t icm42688_config = {
+  static icm42688_config_t icm42688_config = {
       .interface_type = ICM42688_INTERFACE_SPI,
       .acc_sample = ICM42688_ACC_SAMPLE_SGN_2G,
       .gyro_sample = ICM42688_GYRO_SAMPLE_SGN_125DPS,
@@ -93,10 +94,11 @@ void imu_init() {
     usart_error("ICM42688 init failed");
   }
 
-  ahrs_timer_t ahrs_timer = {.init = icm42688_i2c_init,
-                             .start = icm42688_i2c_init,
-                             .get_time_us = ahrs_get_time_us};
-  ahrs_system_t ahrs_system = {.delay_ms = icm42688_delay_ms};
+  // 使用静态变量确保生命周期持续整个程序运行期间
+  static ahrs_timer_t ahrs_timer = {.init = icm42688_i2c_init,
+                                     .start = icm42688_i2c_init,
+                                     .get_time_us = ahrs_get_time_us};
+  static ahrs_system_t ahrs_system = {.delay_ms = icm42688_delay_ms};
   ahrs_hal_init(&ahrs_timer, &ahrs_system);
   ahrs_init();
   ahrs_init_attitude_offset();
@@ -113,8 +115,16 @@ void imu_update() {
     float ay = icm42688_acc_transition(icm42688_acc.y);
     float az = icm42688_acc_transition(icm42688_acc.z);
 
-    ahrs_update(gx, gy, gz, ax, ay, az, 0, 0, 0);
-    ahrs_euler_angle_t current_attitude;
-    ahrs_get_attitude(&current_attitude);
+    // ahrs_update(gx, gy, gz, ax, ay, az, 0, 0, 0);
+    // ahrs_euler_angle_t current_attitude;
+    // ahrs_get_attitude(&current_attitude);
 
+    char message[100];
+    snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
+            gx, gy, gz);
+    HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+    // char message[100];
+    // snprintf(message, sizeof(message), "<main%u>:%d,%d,%d\n", HAL_GetTick(),
+    //         round(current_attitude.pitch), round(current_attitude.roll), round(current_attitude.yaw));
+    // HAL_UART_Transmit_IT(&huart1, message, strlen(message));
 }

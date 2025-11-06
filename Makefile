@@ -38,6 +38,7 @@ BUILD_DIR = build
 C_SOURCES =  \
 $(wildcard Core/Src/*/*.c) \
 Drivers/ThridParty/cJSON.c \
+Core/Src/delay.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_i2c.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c \

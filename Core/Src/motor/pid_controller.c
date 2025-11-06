@@ -23,12 +23,12 @@ void pid_init_default(void)
     // 3.3 0.5 0.6
     PID_Params left_p = {
         .kP = 0.0f,
-        .kI = 0.39f,
+        .kI = 0.36f,
         .kD = 0.0f,
     };
     PID_Params right_p = {
         .kP = 0.0f,
-        .kI = 0.46f,
+        .kI = 0.48f,
         .kD = 0.0f,
     };
     pid_init(&left_p, &right_p);

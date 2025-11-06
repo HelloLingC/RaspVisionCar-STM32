@@ -31,7 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "tim.h"
+#include "common.h"
+// #define HAL_Delay(ms) DWT_Delay_ms(ms)
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -53,8 +54,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-// 重定向printf到UART的函数声明
-int _write(int file, char *ptr, int len);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
