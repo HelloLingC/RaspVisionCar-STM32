@@ -57,7 +57,7 @@ void motor_movements() {
     }
     // Turn Left
     if(sOdometerLeft >= 12500) {
-      if(floorf(yaw) < 45) {
+      if(floorf(yaw) < 35) {
         motor_controller_set_turn_angle(30);
         buzzer_on(1);
       } else {
@@ -66,12 +66,13 @@ void motor_movements() {
         // motor_controller_set_target_rpm(70, 70);
     }
     // Go straight
-    if(sOdometerLeft >= 13800) {
-      motor_controller_set_turn_angle(0);
+    // if(sOdometerLeft >= 13900) {
+    //   motor_controller_set_turn_angle(0);
       
-    }
+    // }
 }
 
+extern float turn_error;
 extern volatile uint8_t system_stop_flag;
 void motor_controller_update() {
   int16_t l_rpm = 0, r_rpm = 0;
@@ -80,12 +81,15 @@ void motor_controller_update() {
   // we havent consider backward situation
   sOdometerLeft += l_rpm;
   sOdometerRight += r_rpm;
-  if(!system_stop_flag) {
-    motor_movements();
-  }
+  // if(!system_stop_flag) {
+  //   motor_movements();
+  // }
 
   real_target_left_rpm = target_left_rpm;
   real_target_right_rpm = target_right_rpm;
+
+  sTurnAngle = (int) turn_error * 0.5;
+  
   if (sTurnAngle != 0) {
     // positive: 左转时，左轮转速减小，右轮转速增大
     real_target_left_rpm -= sTurnAngle;

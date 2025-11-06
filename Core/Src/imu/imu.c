@@ -1,4 +1,5 @@
 #include "ahrs_hal.h"
+#include "buzzer.h"
 #include "icm42688.h"
 #include "rasp_comm.h"
 #include "spi.h"
@@ -130,11 +131,13 @@ void imu_update() {
     } else if(collected_offests == 100) {
       gz_offset /= 100;
       collected_offests++;
+      buzzer_on(3);
     } else {
       float gz = (icm42688_gyro.z - gz_offset) * 0.0038147;
-      yaw += gz * 0.05; // Integral
+      // yaw += gz * 0.05; // Integral
+      yaw += gz * 0.02;
       char message[100];
-      snprintf(message, sizeof(message), "<main>:%d\n",
+      snprintf(message, sizeof(message), "%d\n",
       (int)floorf(yaw));
       HAL_UART_Transmit_IT(&huart1, message, strlen(message));
     }

@@ -44,6 +44,8 @@ const char* starts_with(const char *str, const char *prefix) {
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index);
 extern int32_t sOdometerLeft;
 extern int32_t sOdometerRight;
+float turn_error = 0;
+uint8_t host_signal = 0;
 // I was planning to use cJSON at the beginning, but it's too heavy for this project
 int rasp_parse_commands() {
     const char* raw_str = (const char*) rx_buffer;
@@ -78,6 +80,18 @@ int rasp_parse_commands() {
             // Right Velocity
             int16_t right_rpm = atoi(cmd_list[i].param);
             motor_controller_set_right_target_rpm(right_rpm);
+        } else if(strcmp(cmd_list[i].cmd, "cv") == 0) {
+            // Data from OpenCV module in Host
+            turn_error = atof(cmd_list[i].param);
+        } else if(strcmp(cmd_list[i].cmd, "sig") == 0) {
+            // Signal from the Host
+            // 0:red  1:green
+            host_signal = atoi(cmd_list[i].param);
+            if(host_signal == 0) {
+
+            } else if(host_signal == 1) {
+                system_stop_flag = 0;
+            }
         }
     }
     return 1;
