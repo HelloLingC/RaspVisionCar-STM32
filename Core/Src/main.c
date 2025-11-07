@@ -37,6 +37,7 @@
 #include "buzzer.h"
 #include "icm42688.h"
 #include "ahrs_hal.h"
+#include <stdint.h>
 
 // Add this in your main.h or similar header file
 
@@ -60,9 +61,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// 系统控制标志
+// system stop flag will be set on rasp_comm "stop" and "start"
 volatile uint8_t system_stop_flag = 1;
 volatile uint8_t motor_update_flag = 0;
+// motor controller硬程序停止
+volatile uint8_t motor_program_stop_flag = 1;
+
 volatile uint8_t imu_update_flag = 0;
 /* USER CODE END PV */
 
@@ -198,13 +202,18 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    if(motor_update_flag) {
-      motor_update_flag = 0;
-      motor_controller_update();
-    }
-    if(imu_update_flag) {
-      imu_update_flag = 0;
-      // imu_update();
+    if(!system_stop_flag) {
+      // system allow to running
+      if(motor_update_flag) {
+        motor_update_flag = 0;
+        motor_controller_update();
+      }
+      if(imu_update_flag) {
+        imu_update_flag = 0;
+        // imu_update();
+      }
+    } else {
+      Motor_Set_Speed(0);
     }
     // Update OLED display
     uint32_t current_time = HAL_GetTick();

@@ -17,6 +17,7 @@
 uint8_t rx_buffer[RX_BUF_SIZE];
 uint8_t rx_index = 0;
 
+
 extern DMA_HandleTypeDef hdma_usart1_rx;
 void rasp_comm_init(void) {
     memset(rx_buffer, 0, RX_BUF_SIZE);
@@ -44,6 +45,8 @@ const char* starts_with(const char *str, const char *prefix) {
 void parse_commands(const char *str, Rasp_Command_t *cmd_list, int *cmd_list_index);
 extern int32_t sOdometerLeft;
 extern int32_t sOdometerRight;
+extern volatile uint8_t motor_program_stop_flag;
+
 float turn_error = 0;
 uint8_t host_signal = 0;
 // I was planning to use cJSON at the beginning, but it's too heavy for this project
@@ -52,8 +55,10 @@ int rasp_parse_commands() {
     // usart_info("Received: %s", raw_str);
 
     if (strcmp(raw_str, "start\n") == 0) {
+        usart_info("Start!!~");
         system_stop_flag = 0;
     } else if (strcmp(raw_str, "stop\n") == 0) {
+        usart_info("STOP!!~");
         system_stop_flag = 1;
     } else if (strcmp(raw_str, "beep\n") == 0) {
         buzzer_on(5);
@@ -91,7 +96,7 @@ int rasp_parse_commands() {
             if(host_signal == 0) {
 
             } else if(host_signal == 1) {
-                system_stop_flag = 0;
+                motor_program_stop_flag = 0;
             }
         }
     }
@@ -100,6 +105,18 @@ int rasp_parse_commands() {
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     if (huart->Instance == USART1) {
+        if (size == 0 || size > RX_BUF_SIZE)
+            return;
+
+        // if (size > RX_BUF_SIZE)
+        //     size = RX_BUF_SIZE;
+        // if (size > 0 && size <= RX_BUF_SIZE)
+        // {
+        //     memcpy(rx_temp, rx_buffer, size);
+        //     rx_len = size;
+        //     rx_flag = 1;
+        // }
+
         // notice that some ppl say size may can be real_size-1 or +1
         rx_buffer[size] = '\0'; 
         rasp_parse_commands();

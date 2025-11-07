@@ -5,9 +5,6 @@
 #include "feedforward_controller.h"
 #include "motor.h"
 #include "stm32f1xx_hal.h"
-#include "usart.h"
-#include <string.h>
-#include <stdio.h>
 #include "rasp_comm.h"
 #include <math.h>
 #include "buzzer.h"
@@ -52,6 +49,7 @@ int32_t sOdometerRight = 0;
 extern float yaw;
 extern float turn_error;
 extern uint8_t slow_accelerate_flag;
+extern uint8_t motor_program_stop_flag;
 uint32_t stop_at = 0;
 
 void motor_movements() {
@@ -61,21 +59,34 @@ void motor_movements() {
       target_right_rpm = 120;
       slow_accelerate_flag = 1;
     } else if(sOdometerLeft > 5800 && sOdometerLeft < 20000) {
+      // 准备进入弯道
       slow_accelerate_flag = 0;
-      sTurnAngle = (int) turn_error * 0.58;
-      // buzzer_on(1);
-    } else if(sOdometerLeft > 19000 && sOdometerLeft < 23000) {
-      sTurnAngle = 0;
-      Motor_Left_Set_Raw_Speed(0);
-      Motor_Right_Set_Raw_Speed(0);
-      buzzer_on(3);
-      HAL_Delay(2000);
-    } else if (sOdometerLeft > 23000) {
-        sTurnAngle = (int) turn_error * 0.58;
-        target_left_rpm = 130;
-        target_right_rpm = 130;
-    } else if (sOdometerLeft > 50000 && sOdometerLeft < 51000) {
+      sTurnAngle = (int) turn_error * 0.38;
+    } else if(sOdometerLeft > 19000 && sOdometerLeft < 24000) {
+      // 斑马线停止
+      if(stop_at == 0) {
+        stop_at = HAL_GetTick();
+        sTurnAngle = 0;
+        target_left_rpm = 0;
+        target_right_rpm = 0;
+        buzzer_on(3);
+      }
+      if(HAL_GetTick() - stop_at > 3000) {
+        // 斑马线恢复
+        sTurnAngle = (int) turn_error * 0.38;
+        target_left_rpm = 120;
+        target_right_rpm = 120;
+      }
+    } else if (sOdometerLeft > 65000 && sOdometerLeft < 69000) {
+      // 减速
+      sTurnAngle = (int) turn_error * 0.38;
+      target_left_rpm = 50;
+      target_right_rpm = 50;
       buzzer_on(2);
+    } else {
+      sTurnAngle = (int) turn_error * 0.38;
+      target_left_rpm = 120;
+      target_right_rpm = 120;
     }
 }
 
@@ -89,7 +100,7 @@ void motor_controller_update() {
   sOdometerLeft += l_rpm;
   sOdometerRight += r_rpm;
 
-  if(!system_stop_flag) {
+  if(!motor_program_stop_flag) {
     motor_movements();
   }
 
@@ -97,8 +108,6 @@ void motor_controller_update() {
 
   real_target_left_rpm = target_left_rpm;
   real_target_right_rpm = target_right_rpm;
-
-  // sTurnAngle = (int) turn_error * 0.5;
 
   if (sTurnAngle != 0) {
     // positive: 左转时，左轮转速减小，右轮转速增大
