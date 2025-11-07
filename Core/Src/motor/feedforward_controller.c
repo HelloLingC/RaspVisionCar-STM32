@@ -1,5 +1,6 @@
 #include "feedforward_controller.h"
 #include "motor.h"
+#include <stdint.h>
 
 typedef struct {
     FF_Params left_params;
@@ -7,6 +8,8 @@ typedef struct {
 } FF_Handle;
 
 static FF_Handle s_ff;
+
+uint8_t slow_accelerate_flag = 0;
 
 void ff_init_default(void) {
     FF_Params left_p = {
@@ -25,16 +28,28 @@ void ff_init_default(void) {
 
 static int16_t ff_compute_left_pwm(float rpm_cmd) {
     float sign = (rpm_cmd > 0.0f) - (rpm_cmd < 0.0f);
-    float u = s_ff.left_params.kS * sign + s_ff.left_params.kV * rpm_cmd;
-    if(rpm_cmd > 140) {
-        
+    float u;
+    // u = s_ff.left_params.kS * sign + s_ff.left_params.kV * rpm_cmd;
+
+    // 防止速度太快，小车前翘
+    if(slow_accelerate_flag && rpm_cmd > 130) {
+        u = s_ff.left_params.kS * sign + s_ff.left_params.kV * 130;
+    } else {
+        u = s_ff.left_params.kS * sign + s_ff.left_params.kV * rpm_cmd;
     }
     return (int16_t)u;
 }
 
 static int16_t ff_compute_right_pwm(float rpm_cmd) {
     float sign = (rpm_cmd > 0.0f) - (rpm_cmd < 0.0f);
-    float u = s_ff.right_params.kS * sign + s_ff.right_params.kV * rpm_cmd;
+    float u;
+    if(slow_accelerate_flag && rpm_cmd > 120) {
+       u = s_ff.left_params.kS * sign + s_ff.left_params.kV * 120;
+    } else {
+        u = s_ff.right_params.kS * sign + s_ff.right_params.kV * rpm_cmd;
+    }
+    // u = s_ff.right_params.kS * sign + s_ff.right_params.kV * rpm_cmd;
+
     // kA*accel 可后续加入
     return (int16_t)u;
 }

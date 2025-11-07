@@ -91,7 +91,7 @@ int rasp_parse_commands() {
             if(host_signal == 0) {
 
             } else if(host_signal == 1) {
-                // system_stop_flag = 0;
+                system_stop_flag = 0;
             }
         }
     }

@@ -61,7 +61,7 @@
 
 /* USER CODE BEGIN PV */
 // 系统控制标志
-volatile uint8_t system_stop_flag = 0;
+volatile uint8_t system_stop_flag = 1;
 volatile uint8_t motor_update_flag = 0;
 volatile uint8_t imu_update_flag = 0;
 /* USER CODE END PV */
@@ -198,7 +198,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    if(motor_update_flag && !system_stop_flag) {
+    if(motor_update_flag) {
       motor_update_flag = 0;
       motor_controller_update();
     }

@@ -4,6 +4,7 @@
 #include "pid_controller.h"
 #include "feedforward_controller.h"
 #include "motor.h"
+#include "stm32f1xx_hal.h"
 #include "usart.h"
 #include <string.h>
 #include <stdio.h>
@@ -49,30 +50,36 @@ void motor_controller_get_real_target_rpm(int16_t *left_rpm, int16_t *right_rpm)
 int32_t sOdometerLeft = 0;
 int32_t sOdometerRight = 0;
 extern float yaw;
+extern float turn_error;
+extern uint8_t slow_accelerate_flag;
+uint32_t stop_at = 0;
 
 void motor_movements() {
     // Go straight
-    if(sOdometerLeft < 12500) {
-        motor_controller_set_turn_angle(0);
-        motor_controller_set_target_rpm(70, 70);
+    if(sOdometerLeft <= 5800) {
+      target_left_rpm = 120;
+      target_right_rpm = 120;
+      slow_accelerate_flag = 1;
+    } else if(sOdometerLeft > 5800 && sOdometerLeft < 20000) {
+      slow_accelerate_flag = 0;
+      sTurnAngle = (int) turn_error * 0.58;
+      // buzzer_on(1);
+    } else if(sOdometerLeft > 19000 && sOdometerLeft < 23000) {
+      sTurnAngle = 0;
+      Motor_Left_Set_Raw_Speed(0);
+      Motor_Right_Set_Raw_Speed(0);
+      buzzer_on(3);
+      HAL_Delay(2000);
+    } else if (sOdometerLeft > 23000) {
+        sTurnAngle = (int) turn_error * 0.58;
+        target_left_rpm = 130;
+        target_right_rpm = 130;
+    } else if (sOdometerLeft > 50000 && sOdometerLeft < 51000) {
+      buzzer_on(2);
     }
-    // Turn Left
-    if(sOdometerLeft >= 12500) {
-      if(floorf(yaw) < 35) {
-        motor_controller_set_turn_angle(30);
-        buzzer_on(1);
-      } else {
-        motor_controller_set_turn_angle(0);
-      }
-    }
-    // Go straight
-    // if(sOdometerLeft >= 13900) {
-    //   motor_controller_set_turn_angle(0);
-      
-    // }
 }
 
-extern float turn_error;
+
 extern volatile uint8_t system_stop_flag;
 void motor_controller_update() {
   int16_t l_rpm = 0, r_rpm = 0;
@@ -81,18 +88,15 @@ void motor_controller_update() {
   // we havent consider backward situation
   sOdometerLeft += l_rpm;
   sOdometerRight += r_rpm;
-  // if(!system_stop_flag) {
-  //   motor_movements();
-  // }
+
+  if(!system_stop_flag) {
+    motor_movements();
+  }
+
+  // sTurnAngle = (int) turn_error * 0.53;
 
   real_target_left_rpm = target_left_rpm;
   real_target_right_rpm = target_right_rpm;
-
-  if(sOdometerLeft > 6000) {
-    sTurnAngle = (int) turn_error * 0.5;
-  } else if(sOdometerLeft == 6000) {
-    buzzer_on(6);
-  }
 
   // sTurnAngle = (int) turn_error * 0.5;
 
