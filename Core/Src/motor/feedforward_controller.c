@@ -26,7 +26,9 @@ void ff_init_default(void) {
 static int16_t ff_compute_left_pwm(float rpm_cmd) {
     float sign = (rpm_cmd > 0.0f) - (rpm_cmd < 0.0f);
     float u = s_ff.left_params.kS * sign + s_ff.left_params.kV * rpm_cmd;
-    // kA*accel 可后续加入
+    if(rpm_cmd > 140) {
+        
+    }
     return (int16_t)u;
 }
 

@@ -58,6 +58,7 @@ int rasp_parse_commands() {
     } else if (strcmp(raw_str, "beep\n") == 0) {
         buzzer_on(5);
     } else if (strcmp(raw_str, "reset\n") == 0) {
+        turn_error = 0;
         sOdometerLeft = 0;
         sOdometerRight = 0;
     }
@@ -90,7 +91,7 @@ int rasp_parse_commands() {
             if(host_signal == 0) {
 
             } else if(host_signal == 1) {
-                system_stop_flag = 0;
+                // system_stop_flag = 0;
             }
         }
     }

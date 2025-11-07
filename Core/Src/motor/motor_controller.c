@@ -7,6 +7,7 @@
 #include "usart.h"
 #include <string.h>
 #include <stdio.h>
+#include "rasp_comm.h"
 #include <math.h>
 #include "buzzer.h"
 
@@ -63,7 +64,6 @@ void motor_movements() {
       } else {
         motor_controller_set_turn_angle(0);
       }
-        // motor_controller_set_target_rpm(70, 70);
     }
     // Go straight
     // if(sOdometerLeft >= 13900) {
@@ -88,8 +88,14 @@ void motor_controller_update() {
   real_target_left_rpm = target_left_rpm;
   real_target_right_rpm = target_right_rpm;
 
-  sTurnAngle = (int) turn_error * 0.5;
-  
+  if(sOdometerLeft > 6000) {
+    sTurnAngle = (int) turn_error * 0.5;
+  } else if(sOdometerLeft == 6000) {
+    buzzer_on(6);
+  }
+
+  // sTurnAngle = (int) turn_error * 0.5;
+
   if (sTurnAngle != 0) {
     // positive: 左转时，左轮转速减小，右轮转速增大
     real_target_left_rpm -= sTurnAngle;
