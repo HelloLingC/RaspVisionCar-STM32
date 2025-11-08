@@ -1,5 +1,5 @@
 #include "rasp_comm.h"
-#include "main.h"
+#include "common.h"
 // #include "cJSON.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -11,12 +11,14 @@
 #include "stm32f1xx_hal_uart.h"
 #include "usart.h"
 #include "motor.h"
+#include "command.h"
 
 #define RX_BUF_SIZE 64
 
-uint8_t rx_buffer[RX_BUF_SIZE];
-uint8_t rx_index = 0;
-
+uint8_t rx_buffer[RX_BUF_SIZE]; // DMA写入区a
+uint8_t rx_temp[RX_BUF_SIZE];           // 稳定拷贝区
+volatile uint16_t rx_len = 0;
+volatile uint8_t rx_flag = 0;           // 新数据标志
 
 extern DMA_HandleTypeDef hdma_usart1_rx;
 void rasp_comm_init(void) {
@@ -49,17 +51,20 @@ extern volatile uint8_t motor_program_stop_flag;
 
 float turn_error = 0;
 uint8_t host_signal = 0;
+
 // I was planning to use cJSON at the beginning, but it's too heavy for this project
-int rasp_parse_commands() {
+int rasp_parse_commands(const uint8_t* rx_buffer, uint8_t len) {
+
     const char* raw_str = (const char*) rx_buffer;
     // usart_info("Received: %s", raw_str);
 
     if (strcmp(raw_str, "start\n") == 0) {
-        usart_info("Start!!~");
         system_stop_flag = 0;
+        usart_info("Start!!~");
     } else if (strcmp(raw_str, "stop\n") == 0) {
-        usart_info("STOP!!~");
         system_stop_flag = 1;
+        motor_program_stop_flag = 1;
+        usart_info("STOP!!~");
     } else if (strcmp(raw_str, "beep\n") == 0) {
         buzzer_on(5);
     } else if (strcmp(raw_str, "reset\n") == 0) {
@@ -77,7 +82,6 @@ int rasp_parse_commands() {
         if (strcmp(cmd_list[i].cmd, "ta") == 0) {
             // Turn Angle
             motor_controller_set_turn_angle(atoi(cmd_list[i].param));
-            // usart_info("turn_angle: %d", sTurnAngle);
         } else if (strcmp(cmd_list[i].cmd, "lv") == 0) {
             // Left Velocity
             int16_t left_rpm = atoi(cmd_list[i].param);
@@ -103,23 +107,27 @@ int rasp_parse_commands() {
     return 1;
 }
 
+uint8_t command[50];
+int commandLength = 0;
+void uart1_rx_process(void)
+{
+    commandLength = Command_GetCommand(command);
+    if (commandLength != 0){
+        // Command_GetCommand 返回的指令格式：[0xAA, length, data..., checksum]
+        // 需要跳过协议头（2字节）和校验和（1字节），只传递 data 部分
+        if (commandLength >= 3) {
+            // usart_info(command);
+            uint8_t dataLength = commandLength - 3;  // 减去 header、length 和 checksum
+            command[commandLength - 1] = '\0';  // 在 data 末尾添加字符串结束符（覆盖校验和位置）
+            rasp_parse_commands(command + 2, dataLength);  // 跳过 header 和 length
+        }
+    }
+}
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     if (huart->Instance == USART1) {
-        if (size == 0 || size > RX_BUF_SIZE)
-            return;
-
-        // if (size > RX_BUF_SIZE)
-        //     size = RX_BUF_SIZE;
-        // if (size > 0 && size <= RX_BUF_SIZE)
-        // {
-        //     memcpy(rx_temp, rx_buffer, size);
-        //     rx_len = size;
-        //     rx_flag = 1;
-        // }
-
+        Command_Write(rx_buffer, size);
         // notice that some ppl say size may can be real_size-1 or +1
-        rx_buffer[size] = '\0'; 
-        rasp_parse_commands();
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUF_SIZE);
          // 关闭DMA过半中断
         __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
@@ -214,6 +222,6 @@ void usart_info(const char *format, ...)
     if (len > 0 && len < sizeof(buffer)) {
         char info_message[300];
         snprintf(info_message, sizeof(info_message), "[%u] INFO: %s\r\n", (unsigned int)HAL_GetTick(), buffer);
-        HAL_UART_Transmit(&huart1, (uint8_t*)info_message, strlen(info_message), HAL_MAX_DELAY);
+        HAL_UART_Transmit_IT(&huart1, (uint8_t*)info_message, strlen(info_message));
     }
 }

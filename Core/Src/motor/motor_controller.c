@@ -69,7 +69,7 @@ void motor_movements() {
         sTurnAngle = 0;
         target_left_rpm = 0;
         target_right_rpm = 0;
-        buzzer_on(3);
+        buzzer_on(5);
       }
       if(HAL_GetTick() - stop_at > 3000) {
         // 斑马线恢复

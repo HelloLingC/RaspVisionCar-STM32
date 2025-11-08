@@ -60,8 +60,6 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
-// 系统控制标志
-extern volatile uint8_t system_stop_flag;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

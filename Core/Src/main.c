@@ -37,8 +37,7 @@
 #include "buzzer.h"
 #include "icm42688.h"
 #include "ahrs_hal.h"
-#include <stdint.h>
-
+#include "common.h"
 // Add this in your main.h or similar header file
 
 /* USER CODE END Includes */
@@ -202,6 +201,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+    uart1_rx_process();
+
     if(!system_stop_flag) {
       // system allow to running
       if(motor_update_flag) {
