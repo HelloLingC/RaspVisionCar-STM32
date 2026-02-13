@@ -310,7 +310,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
     {
       case HAL_TIM_ACTIVE_CHANNEL_1:
         // 100ms任务
-        // imu_update();
         imu_update_flag = 1;
 
         uint32_t next_compare1 = (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) + 500) % 10000;

@@ -116,9 +116,9 @@ void uart1_rx_process(void)
         // Command_GetCommand 返回的指令格式：[0xAA, length, data..., checksum]
         // 需要跳过协议头（2字节）和校验和（1字节），只传递 data 部分
         if (commandLength >= 3) {
-            // usart_info(command);
             uint8_t dataLength = commandLength - 3;  // 减去 header、length 和 checksum
             command[commandLength - 1] = '\0';  // 在 data 末尾添加字符串结束符（覆盖校验和位置）
+            // usart_info(command + 2);
             rasp_parse_commands(command + 2, dataLength);  // 跳过 header 和 length
         }
     }

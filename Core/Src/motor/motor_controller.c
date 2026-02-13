@@ -55,8 +55,8 @@ uint32_t stop_at = 0;
 void motor_movements() {
     // Go straight
     if(sOdometerLeft <= 5800) {
-      target_left_rpm = 120;
-      target_right_rpm = 120;
+      target_left_rpm = 123;
+      target_right_rpm = 123;
       slow_accelerate_flag = 1;
     } else if(sOdometerLeft > 5800 && sOdometerLeft < 20000) {
       // 准备进入弯道
@@ -74,8 +74,8 @@ void motor_movements() {
       if(HAL_GetTick() - stop_at > 3000) {
         // 斑马线恢复
         sTurnAngle = (int) turn_error * 0.38;
-        target_left_rpm = 120;
-        target_right_rpm = 120;
+        target_left_rpm = 123;
+        target_right_rpm = 123;
       }
     } else if (sOdometerLeft > 65000 && sOdometerLeft < 69000) {
       // 减速
@@ -85,8 +85,8 @@ void motor_movements() {
       buzzer_on(2);
     } else {
       sTurnAngle = (int) turn_error * 0.38;
-      target_left_rpm = 120;
-      target_right_rpm = 120;
+      target_left_rpm = 123;
+      target_right_rpm = 123;
     }
 }
 
@@ -104,7 +104,7 @@ void motor_controller_update() {
     motor_movements();
   }
 
-  // sTurnAngle = (int) turn_error * 0.53;
+  // sTurnAngle = (int) turn_error * 0.58;
 
   real_target_left_rpm = target_left_rpm;
   real_target_right_rpm = target_right_rpm;
