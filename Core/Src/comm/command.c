@@ -1,137 +1,139 @@
 #include "command.h"
+#include <stddef.h>
+#include <stdint.h>
 
-// 指令的最小长度
-#define COMMAND_MIN_LENGTH 4
+#define BUFFER_SIZE 128U
+#define FRAME_SOF1 0xA5U
+#define FRAME_SOF2 0x5AU
+#define FRAME_MIN_LEN 8U
+#define FRAME_MAX_PAYLOAD 48U
+#define FRAME_MAX_LEN (FRAME_MIN_LEN + FRAME_MAX_PAYLOAD)
 
-// 循环缓冲区大小
-#define BUFFER_SIZE 128
-// 循环缓冲区
-uint8_t buffer[BUFFER_SIZE];
-// 循环缓冲区读索引
-uint8_t readIndex = 0;
-// 循环缓冲区写索引
-uint8_t writeIndex = 0;
+static uint8_t s_buffer[BUFFER_SIZE];
+static uint16_t s_read_index = 0U;
+static uint16_t s_write_index = 0U;
+static uint16_t s_count = 0U;
+static Command_Stats_t s_stats = {0};
 
-/**
-* @brief 增加读索引
-* @param length 要增加的长度
-*/
-void Command_AddReadIndex(uint8_t length) {
-    readIndex += length;
-    readIndex %= BUFFER_SIZE;
+static uint8_t buffer_peek(uint16_t offset)
+{
+    uint16_t index = (uint16_t)((s_read_index + offset) % BUFFER_SIZE);
+    return s_buffer[index];
 }
 
-/**
-* @brief 读取第i位数据 超过缓存区长度自动循环
-* @param i 要读取的数据索引
-*/
-
-uint8_t Command_Read(uint8_t i) {
-    uint8_t index = i % BUFFER_SIZE;
-    return buffer[index];
-}
-
-/**
-* @brief 计算未处理的数据长度
-* @return 未处理的数据长度
-* @retval 0 缓冲区为空
-* @retval 1~BUFFER_SIZE-1 未处理的数据长度
-* @retval BUFFER_SIZE 缓冲区已满
-*/
-uint8_t Command_GetLength() {
- // 读索引等于写索引时，缓冲区为空
- if (readIndex == writeIndex) {
-   return 0;
- }
- // 如果缓冲区已满,返回BUFFER_SIZE
- if (writeIndex + 1 == readIndex || (writeIndex == BUFFER_SIZE - 1 && readIndex == 0)) {
-   return BUFFER_SIZE;
- }
- // 如果缓冲区未满,返回未处理的数据长度
- if (readIndex <= writeIndex) {
-   return writeIndex - readIndex;
- } else {
-   return BUFFER_SIZE - readIndex + writeIndex;
- }
-}
-
-// uint8_t Command_GetLength() {
-//     return (writeIndex + BUFFER_SIZE - readIndex) % BUFFER_SIZE;
-// }
-
-
-/**
-* @brief 计算缓冲区剩余空间
-* @return 剩余空间
-* @retval 0 缓冲区已满
-* @retval 1~BUFFER_SIZE-1 剩余空间
-* @retval BUFFER_SIZE 缓冲区为空
-*/
-uint8_t Command_GetRemain() {
-    return BUFFER_SIZE - Command_GetLength();
-}
-
-/**
-* @brief 向缓冲区写入数据
-* @param data 要写入的数据指针
-* @param length 要写入的数据长度
-* @return 写入的数据长度
-*/
-uint8_t Command_Write(uint8_t *data, uint8_t length) {
-    // 如果缓冲区不足 则不写入数据 返回0
-    if (Command_GetRemain() < length) {
-        return 0;
+static void buffer_drop(uint16_t length)
+{
+    if (length > s_count) {
+        length = s_count;
     }
-    // 使用memcpy函数将数据写入缓冲区
-    if (writeIndex + length < BUFFER_SIZE) {
-        memcpy(buffer + writeIndex, data, length);
-        writeIndex += length;
-    } else {
-        uint8_t firstLength = BUFFER_SIZE - writeIndex;
-        memcpy(buffer + writeIndex, data, firstLength);
-        memcpy(buffer, data + firstLength, length - firstLength);
-        writeIndex = length - firstLength;
-    }
-    return length;
+
+    s_read_index = (uint16_t)((s_read_index + length) % BUFFER_SIZE);
+    s_count = (uint16_t)(s_count - length);
 }
 
-/**
-* @brief 尝试获取一条指令
-* @param command 指令存放指针
-* @return 获取的指令长度
-* @retval 0 没有获取到指令
-*/
-uint8_t Command_GetCommand(uint8_t *command) {
-    // 寻找完整指令
-    while (1) {
-        // 如果缓冲区长度小于COMMAND_MIN_LENGTH 则不可能有完整的指令
-        if (Command_GetLength() < COMMAND_MIN_LENGTH) {
-        return 0;
-        }
-        // 如果不是包头 则跳过 重新开始寻找
-        if (Command_Read(readIndex) != 0xAA) {
-        Command_AddReadIndex(1);
-        continue;
-        }
-        // 如果缓冲区长度小于指令长度 则不可能有完整的指令
-        uint8_t length = Command_Read(readIndex + 1);
-        if (Command_GetLength() < length) {
-        return 0;
-        }
-        // 如果校验和不正确 则跳过 重新开始寻找
-        uint8_t sum = 0;
-        for (uint8_t i = 0; i < length - 1; i++) {
-        sum += Command_Read(readIndex + i);
-        }
-        if (sum != Command_Read(readIndex + length - 1)) {
-        Command_AddReadIndex(1);
-        continue;
-        }
-        // 如果找到完整指令 则将指令写入command 返回指令长度
-        for (uint8_t i = 0; i < length; i++) {
-        command[i] = Command_Read(readIndex + i);
-        }
-        Command_AddReadIndex(length);
-        return length;
+static void buffer_pop(uint8_t *out, uint16_t length)
+{
+    uint16_t i;
+    for (i = 0U; i < length; ++i) {
+        out[i] = s_buffer[s_read_index];
+        s_read_index = (uint16_t)((s_read_index + 1U) % BUFFER_SIZE);
     }
+    s_count = (uint16_t)(s_count - length);
+}
+
+uint16_t Command_Write(const uint8_t *data, uint16_t length)
+{
+    uint16_t i;
+    uint16_t written = 0U;
+    uint16_t capacity_left = (uint16_t)(BUFFER_SIZE - s_count);
+
+    if (data == NULL || length == 0U) {
+        return 0U;
+    }
+
+    if (length > capacity_left) {
+        s_stats.overflow += (uint32_t)(length - capacity_left);
+        length = capacity_left;
+    }
+
+    for (i = 0U; i < length; ++i) {
+        s_buffer[s_write_index] = data[i];
+        s_write_index = (uint16_t)((s_write_index + 1U) % BUFFER_SIZE);
+        ++written;
+    }
+
+    s_count = (uint16_t)(s_count + written);
+    return written;
+}
+
+uint8_t Command_GetCommand(uint8_t *command, uint8_t command_capacity)
+{
+    while (s_count > 0U) {
+        uint8_t head = buffer_peek(0U);
+        uint8_t payload_len;
+        uint8_t total_len;
+
+        if (head != FRAME_SOF1) {
+            ++s_stats.framing_err;
+            buffer_drop(1U);
+            continue;
+        }
+
+        if (s_count < 2U) {
+            return 0U;
+        }
+
+        if (buffer_peek(1U) != FRAME_SOF2) {
+            ++s_stats.framing_err;
+            buffer_drop(1U);
+            continue;
+        }
+
+        if (s_count < 6U) {
+            return 0U;
+        }
+
+        payload_len = buffer_peek(5U);
+        if (payload_len > FRAME_MAX_PAYLOAD) {
+            ++s_stats.len_err;
+            buffer_drop(1U);
+            continue;
+        }
+
+        total_len = (uint8_t)(FRAME_MIN_LEN + payload_len);
+        if (total_len < FRAME_MIN_LEN || total_len > FRAME_MAX_LEN) {
+            ++s_stats.len_err;
+            buffer_drop(1U);
+            continue;
+        }
+
+        if (s_count < total_len) {
+            return 0U;
+        }
+
+        if (total_len > command_capacity) {
+            ++s_stats.output_too_small;
+            buffer_drop(total_len);
+            continue;
+        }
+
+        buffer_pop(command, total_len);
+        return total_len;
+    }
+
+    return 0U;
+}
+
+void Command_GetStats(Command_Stats_t *stats)
+{
+    if (stats == NULL) {
+        return;
+    }
+
+    *stats = s_stats;
+}
+
+void Command_ResetStats(void)
+{
+    memset(&s_stats, 0, sizeof(s_stats));
 }

@@ -1,2 +1,7 @@
 
 使用socat启动 TCP 服务器（监听在 3444 端口），并将所有来自 TCP 的连接数据转发到串口 /dev/ttyS0（通常是 GPIO 上的串口），同时将串口接收到的数据发送给所有已连接的 TCP 客户端。
+
+## Protocol and Pi client
+
+- Protocol document: `docs/PI_STM32_CONTROL_PROTOCOL.md`
+- Matching Python client: `tools/pi_control/pi_controller.py`

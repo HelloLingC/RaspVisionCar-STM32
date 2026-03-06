@@ -201,20 +201,15 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    uart1_rx_process();
+    rasp_comm_poll();
 
-    if(!system_stop_flag) {
-      // system allow to running
-      if(motor_update_flag) {
-        motor_update_flag = 0;
-        motor_controller_update();
-      }
-      if(imu_update_flag) {
-        imu_update_flag = 0;
-        // imu_update();
-      }
-    } else {
-      Motor_Set_Speed(0);
+    if(motor_update_flag) {
+      motor_update_flag = 0;
+      motor_controller_update();
+    }
+    if(imu_update_flag) {
+      imu_update_flag = 0;
+      // imu_update();
     }
     // Update OLED display
     uint32_t current_time = HAL_GetTick();

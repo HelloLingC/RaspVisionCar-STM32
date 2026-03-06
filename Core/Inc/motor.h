@@ -24,6 +24,7 @@
 void motor_controller_set_left_target_rpm(int16_t left_rpm);
 void motor_controller_set_right_target_rpm(int16_t right_rpm);
 void motor_controller_set_target_rpm(int16_t left_rpm, int16_t right_rpm);
+void motor_controller_set_comm_target_rpm(int16_t left_rpm, int16_t right_rpm);
 
 void motor_controller_set_turn_angle(int16_t turn_angle);
 int16_t motor_controller_get_turn_angle();
@@ -41,4 +42,3 @@ void Motor_Left_ALL_RESET(void);
 void Motor_Right_ALL_RESET(void);
 
 #endif
-

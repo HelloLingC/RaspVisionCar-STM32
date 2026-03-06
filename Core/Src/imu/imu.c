@@ -5,8 +5,11 @@
 #include "spi.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_def.h"
+#include "usart.h"
 #include <math.h>
+#include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 /**
  * @brief  ICM42688 I2C通信接口初始化
@@ -139,7 +142,7 @@ void imu_update() {
       char message[100];
       snprintf(message, sizeof(message), "%d\n",
       (int)floorf(yaw));
-      HAL_UART_Transmit_IT(&huart1, message, strlen(message));
+      HAL_UART_Transmit_IT(&huart1, (uint8_t *)message, strlen(message));
     }
     
     
